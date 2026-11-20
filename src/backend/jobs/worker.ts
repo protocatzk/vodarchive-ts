@@ -1,5 +1,6 @@
 import { config } from '../config';
 import { logger } from '../logger';
+import { settingsStore } from '../settings/store';
 import { state, type ActiveJob, type HistoryItem, type JobOutcome } from '../state';
 import { makeKey, type JobRecord } from './job_store';
 import { runUploadPipeline } from './pipeline';
@@ -62,7 +63,7 @@ export function enqueueJob(
     });
   }
 
-  logger.info(`Job angenommen: ${record.job_id} (key=${record.key}, simuliert=${config.jobs.simulate}).`);
+  logger.info(`Job angenommen: ${record.job_id} (key=${record.key}, simuliert=${settingsStore.get().jobs.simulate}).`);
   void drainQueue();
   return { record, done };
 }
@@ -112,7 +113,7 @@ async function processJob(
     job_id: jobId,
     streamer,
     title,
-    stage: config.jobs.simulate ? 'download' : 'download',
+    stage: 'download',
     stage_label: stageLabel('download'),
     pct: 0,
     bytes_done: 0,
@@ -124,7 +125,7 @@ async function processJob(
 
   let outcome: JobOutcome;
   try {
-    outcome = config.jobs.simulate
+    outcome = settingsStore.get().jobs.simulate
       ? await runSimulation(active)
       : await runUploadPipeline(record, active);
   } catch (error) {

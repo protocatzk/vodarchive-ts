@@ -9,6 +9,7 @@ import { CallbackQuery, type CallbackQueryEvent } from 'telegram/events/Callback
 import { Button } from 'telegram/tl/custom/button';
 import { config } from '../config';
 import { logger } from '../logger';
+import { settingsStore } from '../settings/store';
 import { state } from '../state';
 import type {
   TelegramGateway,
@@ -86,7 +87,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
   }
 
   async connect(): Promise<void> {
-    const { apiId, apiHash, botToken } = config.telegram;
+    const { apiId, apiHash, botToken } = settingsStore.get().telegram;
     if (!apiId || !apiHash || !botToken) {
       throw new Error('TELEGRAM_API_ID, TELEGRAM_API_HASH und TELEGRAM_BOT_TOKEN sind erforderlich.');
     }
@@ -163,7 +164,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
   }
 
   private isAllowedUser(user: Api.User): boolean {
-    const allowed = config.telegram.allowedDashboardUsers;
+    const allowed = settingsStore.get().telegram.allowedDashboardUsers;
     if (allowed.length === 0) return false;
     const username = (user.username ?? '').toLowerCase();
     const handle = username ? `@${username}` : '';
@@ -358,7 +359,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
     const message = await client.sendFile(entity, {
       file: new CustomFile(path.basename(filePath), stat.size, filePath),
       caption,
-      workers: Math.max(1, config.upload.parallelWorkers),
+      workers: Math.max(1, settingsStore.get().jobs.parallelWorkers),
       forceDocument: !meta,
       supportsStreaming: Boolean(meta),
       topMsgId: topicId,

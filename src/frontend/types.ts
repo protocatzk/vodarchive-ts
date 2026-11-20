@@ -98,3 +98,84 @@ export interface TopicsPayload {
   topics: TopicRow[];
   alias_count: number;
 }
+
+export interface MaskedSettings {
+  telegram: {
+    apiId: number;
+    apiHash: string;
+    botToken: string;
+    chatId: string;
+    forumChatId: string;
+    forwardDropAuthor: boolean;
+    allowedDashboardUsers: string[];
+  };
+  jobs: {
+    simulate: boolean;
+    parallelWorkers: number;
+    keepFiles: boolean;
+    doneTtlDays: number;
+    staleDays: number;
+    failedTtlDays: number;
+  };
+  upload: {
+    splitThresholdBytes: number;
+    targetPartSizeBytes: number;
+  };
+  rss: {
+    enabled: boolean;
+    pollIntervalSeconds: number;
+    initialBackfill: boolean;
+    maxItemAgeHours: number;
+    maxItemsPerPoll: number;
+    allowLive: boolean;
+    topicPerFeed: boolean;
+    archiveChatId: string;
+    archiveForumChatId: string;
+    maxRetries: number;
+  };
+  n8n: {
+    timeoutSeconds: number;
+    triggerCooldownSeconds: number;
+    apiBaseUrl: string;
+    apiKey: string;
+  };
+  secrets: {
+    telegramApiHash: boolean;
+    telegramBotToken: boolean;
+    n8nApiKey: boolean;
+  };
+}
+
+export type SourceType = 'rss' | 'opml';
+
+export interface Source {
+  id: string;
+  name: string;
+  type: SourceType;
+  url: string;
+  enabled: boolean;
+  pollIntervalSeconds: number | null;
+  createdAt: string;
+  lastCheck: number | null;
+  lastOk: boolean | null;
+  lastError: string | null;
+  lastItems: number;
+  archivedCount: number;
+}
+
+export type WorkflowStatus = 'ok' | 'failed' | 'timeout' | 'cooldown';
+
+export interface Workflow {
+  id: string;
+  name: string;
+  webhookUrl: string;
+  enabled: boolean;
+  intervalSeconds: number;
+  createdAt: string;
+  lastRun: number | null;
+  lastStatus: WorkflowStatus | null;
+  lastHttpStatus: number | null;
+  lastError: string | null;
+  runCount: number;
+}
+

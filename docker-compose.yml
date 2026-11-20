@@ -3,6 +3,8 @@ services:
     build: .
     container_name: vodarchive-ts
     restart: unless-stopped
+    # Laeuft mit Host-UID, damit ./data ohne Root-Rechte beschreibbar bleibt.
+    user: "${VOD_UID:-1001}:${VOD_GID:-1001}"
     ports:
       - "127.0.0.1:8081:8080"
     env_file:

@@ -18,11 +18,21 @@ Referenz unter [`legacy/`](./legacy).
 | Upload-Pipeline (HTTP/yt-dlp → ffmpeg-Split → Upload) | ✅ implementiert |
 | Telegram MTProto (GramJS) | ✅ implementiert |
 | Paralleler (Fast-)Upload | ✅ via GramJS `workers` |
+| Persistente Einstellungen (`data/settings.json` + UI) | ✅ implementiert |
+| Quellenverwaltung (RSS/OPML, Runtime-CRUD) | ✅ implementiert |
+| n8n-Workflow-Scheduler (autonome Ausführung) | ✅ implementiert |
 
-> Hinweis: Die Telegram- und Medien-Pipeline ist implementiert, benötigt aber
-> gültige Zugangsdaten sowie `ffmpeg`/`ffprobe` (und optional `yt-dlp`). Ein
-> Live-Test gegen Telegram ist in dieser Umgebung nicht möglich. Mit
-> `SIMULATE_JOBS=true` lässt sich die UI ohne externe Dienste testen.
+> Hinweis: Die Medien-Pipeline benötigt `ffmpeg`/`ffprobe` (und `yt-dlp` für
+> YouTube/RSS); im Docker-Image sind sie enthalten. Ohne Telegram-Zugangsdaten
+> bleibt der Login deaktiviert. Mit `SIMULATE_JOBS=true` lässt sich die UI ohne
+> externe Dienste testen.
+
+### n8n-Lizenz
+
+n8n steht unter der **Sustainable Use License** (Fair-Code). Das Selbsthosten
+und Ausführen eigener Workflows für den eigenen Betrieb ist erlaubt; das
+Anbieten von n8n als Dienst für Dritte ist eingeschränkt. Das hier umgesetzte
+Auslösen eigener Webhooks (manuell oder zeitgesteuert) ist damit unproblematisch.
 
 Das Backend ist so aufgebaut, dass die fehlenden Teile hinter klaren Schnittstellen
 (`src/backend/telegram/gateway.ts`, `src/backend/rss/archiver.ts`, Upload-Worker)
@@ -118,6 +128,12 @@ Kompatibel zum Original unter `/voduploader/...`, zusätzlich als `/api/...`-Ali
 | `POST` | `/voduploader/api/jobs/cancel` | Job abbrechen |
 | `GET/POST/PATCH/DELETE` | `/voduploader/api/topics` | Topic-Verwaltung |
 | `POST/DELETE` | `/voduploader/api/topics/alias` | Aliase |
+| `GET/PUT` | `/voduploader/api/settings` | Persistente Einstellungen (Secrets maskiert) |
+| `GET/POST/PATCH/DELETE` | `/voduploader/api/sources` | Quellenverwaltung (RSS/OPML) |
+| `POST` | `/voduploader/api/sources/test` | Quelle testen (ohne Speichern) |
+| `POST` | `/voduploader/api/sources/:id/check` | Einzelne Quelle prüfen |
+| `GET/POST/PATCH/DELETE` | `/voduploader/api/workflows` | n8n-Workflows |
+| `POST` | `/voduploader/api/workflows/:id/run` | Workflow sofort ausführen |
 | `GET` | `/rss/status` | RSS-Status |
 | `POST` | `/rss/check` · `/rss/backfill` · `/voduploader/api/rss/retry` | RSS-Steuerung |
 | `POST` | `/voduploader/n8n/run?name=…` | n8n-Workflow starten |
@@ -128,22 +144,26 @@ Kompatibel zum Original unter `/voduploader/...`, zusätzlich als `/api/...`-Ali
 ```
 src/
 ├── backend/
-│   ├── api/routes/      # auth, status, system, topics, rss, n8n, upload
-│   ├── config/          # zentrale Env-Konfiguration
+│   ├── api/routes/      # auth, status, system, topics, rss, n8n, upload, settings, sources, workflows
+│   ├── config/          # zentrale Env-Konfiguration (Defaults)
 │   ├── jobs/            # Job-Store, Worker, echte Pipeline (media.ts)
 │   ├── logger/          # Logger mit In-Memory-Ringpuffer für die UI
-│   ├── rss/             # RSS/Atom+OPML-Parsing, State, Polling
+│   ├── rss/             # RSS/Atom+OPML-Parsing, dynamische Quellen, Polling
+│   ├── settings/        # persistente Einstellungen
+│   ├── sources/         # persistente Quellenverwaltung
 │   ├── telegram/        # Gateway-Interface, GramJS-Implementierung, Platzhalter
 │   ├── topic/           # Topic-Manager (Cache, Matching, Telegram)
+│   ├── util/            # JSON-Helfer (atomar lesen/schreiben, merge)
+│   ├── workflows/       # n8n-Workflow-Store, Runner, Scheduler
 │   ├── state.ts         # Laufzeit-Zustand (Queue, History, Sessions, Waiters)
 │   ├── server.ts        # Express-App
-│   └── main.ts          # Entrypoint (Telegram + RSS init)
+│   └── main.ts          # Entrypoint (Telegram, RSS, Scheduler)
 └── frontend/
     ├── components/      # Header, Cards, Tabellen, Log-Konsole, Toasts
     ├── composables/     # useToast
     ├── lib/api.ts       # Axios-Client + Endpunkte
-    ├── stores/          # Pinia: auth, dashboard, topics
-    ├── views/           # Login, Dashboard, Topics
+    ├── stores/          # Pinia: auth, dashboard, topics, settings, sources, workflows
+    ├── views/           # Login, Dashboard, Topics, Sources, Workflows, Settings
     ├── router.ts
     └── main.ts
 ```
@@ -157,10 +177,20 @@ src/
 - **Upload-Pipeline:** `src/backend/jobs/pipeline.ts` + `media.ts` – Download per
   HTTP-Stream oder `yt-dlp`, `ffprobe`-Metadaten, `ffmpeg`-Segmentierung per
   Stream-Copy nahe der Zielgröße, anschließender Upload in das passende Topic.
-- **RSS:** `src/backend/rss/archiver.ts` – liest `RSS_FEED_URLS` und optional
-  OPML, parst RSS/Atom, dedupliziert über einen State, filtert nach Alter und
-  reiht neue Items mit Wartezeit (`wait=true`) in die Pipeline ein; Retry mit
-  Backoff.
+- **RSS:** `src/backend/rss/archiver.ts` – liest Quellen aus dem SourceStore
+  (RSS oder OPML), parst RSS/Atom, dedupliziert über einen State, filtert nach
+  Alter und reiht neue Items mit Wartezeit (`wait=true`) in die Pipeline ein;
+  Retry mit Backoff.
+- **Persistente Einstellungen:** `src/backend/settings/store.ts` – `data/settings.json`
+  (0600), Defaults aus Env, Secrets werden in der API maskiert, Telegram-
+  Zugangsdaten benötigen nach Änderung einen Neustart.
+- **Quellen:** `src/backend/sources/store.ts` – `data/sources.json`, CRUD,
+  Aktivierung, optionales Intervall pro Quelle; OPML-Quellen werden beim Poll
+  in einzelne Feeds expandiert.
+- **n8n-Workflows:** `src/backend/workflows/store.ts` + `runner.ts` –
+  `data/workflows.json`, manuelles und zeitgesteuertes Auslösen der Webhooks
+  (Scheduler-Tick alle 15 s, Cooldown, Timeout, Statushistorie). Der alte
+  Endpoint `/voduploader/n8n/run?name=…` bleibt kompatibel.
 - **Dashboard-Login:** `GET /voduploader/api/auth/request` erzeugt ein Token und
   einen Deep-Link `https://t.me/<bot>?start=login_<token>`. Der Bot-Handler
   (`startAuthFlow` im GramJS-Gateway) prüft den Absender gegen
@@ -177,3 +207,10 @@ src/
   Job abgeschlossen" (der Handler wartet auf das Job-Ergebnis).
 - **Login:** benötigt einen verbundenen Bot und mindestens einen Eintrag in
   `ALLOWED_DASHBOARD_USERS`; für lokale Entwicklung `AUTH_DEV_MODE=true` nutzen.
+- **n8n-API:** Base URL/API-Key werden gespeichert, aber das automatische
+  Discovery/Verwalten von Workflows über die n8n-API ist noch nicht umgesetzt;
+  ausgeführt wird über Webhook-URLs.
+- **Quellentypen:** RSS und OPML sind implementiert. Direkte Kanal-/Playlist-
+  Discovery via yt-dlp ist noch offen.
+- **Telegram-Zugangsdaten** aus den Einstellungen greifen erst nach einem
+  Neustart (die MTProto-Verbindung wird beim Start aufgebaut).

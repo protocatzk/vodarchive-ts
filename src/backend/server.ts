@@ -14,6 +14,9 @@ import { statusRouter } from './api/routes/status';
 import { systemRouter, healthHandler } from './api/routes/system';
 import { topicsRouter } from './api/routes/topics';
 import { uploadRouter } from './api/routes/upload';
+import { settingsRouter } from './api/routes/settings';
+import { sourcesRouter } from './api/routes/sources';
+import { workflowsRouter } from './api/routes/workflows';
 
 export function createApp(): express.Express {
   const app = express();
@@ -43,6 +46,9 @@ export function createApp(): express.Express {
   api.use('/', statusRouter);
   api.use('/', systemRouter);
   api.use('/topics', topicsRouter);
+  api.use('/settings', settingsRouter);
+  api.use('/sources', sourcesRouter);
+  api.use('/workflows', workflowsRouter);
 
   app.use('/voduploader/api', api);
   app.use('/api', api);

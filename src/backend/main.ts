@@ -3,14 +3,21 @@ import { enqueueJob } from './jobs/worker';
 import { logger } from './logger';
 import { rssArchiver } from './rss/archiver';
 import { startServer } from './server';
+import { settingsStore } from './settings/store';
+import { sourceStore } from './sources/store';
 import { state } from './state';
 import { GramJsTelegramGateway } from './telegram/gramjs';
+import { startWorkflowScheduler } from './workflows/runner';
+import { workflowStore } from './workflows/store';
 
 function logStartup(): void {
+  const settings = settingsStore.get();
   logger.info('==============================================');
   logger.info(' VODArchive (TypeScript + Vue)');
   logger.info('==============================================');
   logger.info(`Datenverzeichnis: ${config.paths.baseDir}`);
+  logger.info(`Settings: ${settingsStore.file}`);
+  logger.info(`Quellen: ${sourceStore.listEnabled().length} aktiv, Workflows: ${workflowStore.list().length}`);
   logger.info(`Telegram Gateway: ${state.gateway.name} (verbunden=${state.gateway.isConnected()})`);
 
   if (config.auth.devMode) {
@@ -19,38 +26,33 @@ function logStartup(): void {
         'Nur fuer lokale Entwicklung gedacht!',
     );
   }
+
   const missingTelegram: string[] = [];
-  if (!config.telegram.apiId) missingTelegram.push('TELEGRAM_API_ID');
-  if (!config.telegram.apiHash) missingTelegram.push('TELEGRAM_API_HASH');
-  if (!config.telegram.botToken) missingTelegram.push('TELEGRAM_BOT_TOKEN');
+  if (!settings.telegram.apiId) missingTelegram.push('TELEGRAM_API_ID');
+  if (!settings.telegram.apiHash) missingTelegram.push('TELEGRAM_API_HASH');
+  if (!settings.telegram.botToken) missingTelegram.push('TELEGRAM_BOT_TOKEN');
   if (missingTelegram.length) {
     logger.warn(
       `Telegram deaktiviert – fehlende Werte: ${missingTelegram.join(', ')}. ` +
         'Dashboard-Login liefert dann 503.',
     );
   }
-  const missingChats: string[] = [];
-  if (!config.telegram.defaultChatId) missingChats.push('TELEGRAM_CHAT_ID');
-  if (!config.telegram.defaultForumChatId) missingChats.push('TELEGRAM_FORUM_CHAT_ID');
-  if (missingChats.length) {
-    logger.warn(
-      `Uploads benoetigen Ziel-Chats – fehlende Werte: ${missingChats.join(', ')}.`,
-    );
+  if (!settings.telegram.chatId) logger.warn('TELEGRAM_CHAT_ID fehlt – Uploads benoetigen ein Ziel.');
+  if (!settings.telegram.forumChatId) {
+    logger.warn('TELEGRAM_FORUM_CHAT_ID fehlt – Topic-Zuordnung nicht moeglich.');
   }
-  if (config.telegram.allowedDashboardUsers.length === 0) {
-    logger.warn(
-      'ALLOWED_DASHBOARD_USERS ist leer – niemand kann sich am Dashboard anmelden.',
-    );
+  if (settings.telegram.allowedDashboardUsers.length === 0) {
+    logger.warn('ALLOWED_DASHBOARD_USERS ist leer – niemand kann sich am Dashboard anmelden.');
   }
-  if (config.jobs.simulate) {
+  if (settings.jobs.simulate) {
     logger.info('SIMULATE_JOBS aktiv – Uploads werden simuliert (kein echter Download/Upload).');
   }
 }
 
 async function initTelegram(): Promise<void> {
-  if (!config.telegram.apiId || !config.telegram.apiHash || !config.telegram.botToken) {
-    return;
-  }
+  const telegram = settingsStore.get().telegram;
+  if (!telegram.apiId || !telegram.apiHash || !telegram.botToken) return;
+
   const gateway = new GramJsTelegramGateway();
   try {
     await gateway.connect();
@@ -64,8 +66,9 @@ async function initTelegram(): Promise<void> {
 
 function registerRssHandler(): void {
   rssArchiver.onItem = async (item) => {
+    const settings = settingsStore.get();
     const forumChatId =
-      config.rss.archiveForumChatId || config.telegram.defaultForumChatId || undefined;
+      settings.rss.archiveForumChatId || settings.telegram.forumChatId || undefined;
     const data: Record<string, unknown> = {
       download_url: item.url,
       use_ytdlp: true,
@@ -77,9 +80,9 @@ function registerRssHandler(): void {
       thumbnail_url: item.thumbnail,
       platform: item.platform,
       recorded_at: item.publishedIso,
-      chat_id: config.rss.archiveChatId || config.telegram.defaultChatId,
+      chat_id: settings.rss.archiveChatId || settings.telegram.chatId,
       forum_chat_id: forumChatId,
-      topic_name: config.rss.topicPerFeed ? item.channel : undefined,
+      topic_name: settings.rss.topicPerFeed ? item.channel : undefined,
     };
 
     const { record, done } = enqueueJob(data, undefined, true);
@@ -104,6 +107,7 @@ async function main(): Promise<void> {
   registerRssHandler();
   await initTelegram();
   rssArchiver.start();
+  startWorkflowScheduler();
   startServer();
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));

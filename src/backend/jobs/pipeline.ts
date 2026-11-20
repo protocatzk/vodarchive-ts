@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../config';
 import { logger } from '../logger';
+import { settingsStore } from '../settings/store';
 import { state, type ActiveJob } from '../state';
 import { topicManager } from '../topic/manager';
 import type { JobRecord } from './job_store';
@@ -64,7 +65,7 @@ export async function runUploadPipeline(
   const source = str(payload, ['source'], 'streamrecorder');
   const useYtDlp = bool(payload, ['use_ytdlp']) || source === 'rss';
   const chatId =
-    str(payload, ['forum_chat_id']) || String(config.telegram.defaultForumChatId ?? '').trim();
+    str(payload, ['forum_chat_id']) || String(settingsStore.get().telegram.forumChatId ?? '').trim();
   const topicName = str(payload, ['topic_name']) || streamer || 'Allgemein';
 
   if (!chatId) {
@@ -133,10 +134,10 @@ export async function runUploadPipeline(
 
     // 2. Split (nur wenn noetig)
     let parts: string[] = [sourceFile];
-    if (sourceSize > config.upload.splitThresholdBytes) {
+    if (sourceSize > settingsStore.get().upload.splitThresholdBytes) {
       updateActive({ stage: 'split', stage_label: 'Teile Datei auf...', pct: 70 });
       state.jobStore.update(key, { stage: 'split' });
-      const split = await splitFile(sourceFile, config.upload.targetPartSizeBytes, {
+      const split = await splitFile(sourceFile, settingsStore.get().upload.targetPartSizeBytes, {
         signal: controller.signal,
         onProgress: (pctProgress) =>
           updateActive({ pct: 70 + Math.round((pctProgress / 100) * 10) }),
@@ -197,7 +198,7 @@ export async function runUploadPipeline(
 
     updateActive({ pct: 100 });
 
-    if (!config.upload.keepFiles) {
+    if (!settingsStore.get().jobs.keepFiles) {
       for (const file of [sourceFile, ...extraFiles]) {
         fs.rmSync(file, { force: true });
       }

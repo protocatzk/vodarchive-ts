@@ -46,7 +46,10 @@ async function logout(): Promise<void> {
         <span>{{ user || 'Autorisiert' }}</span>
       </div>
       <RouterLink to="/" class="btn" active-class="bg-white/10">Dashboard</RouterLink>
-      <RouterLink to="/topics" class="btn" active-class="bg-white/10">Topics verwalten</RouterLink>
+      <RouterLink to="/topics" class="btn" active-class="bg-white/10">Topics</RouterLink>
+      <RouterLink to="/sources" class="btn" active-class="bg-white/10">Quellen</RouterLink>
+      <RouterLink to="/workflows" class="btn" active-class="bg-white/10">Workflows</RouterLink>
+      <RouterLink to="/settings" class="btn" active-class="bg-white/10">Einstellungen</RouterLink>
       <button type="button" class="btn btn-danger" @click="logout">Abmelden</button>
     </div>
   </header>

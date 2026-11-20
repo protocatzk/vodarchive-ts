@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import { config } from '../../config';
-import { logger } from '../../logger';
-import { state } from '../../state';
 import { requireAuth } from '../middleware/auth';
+import { runWorkflow } from '../../workflows/runner';
+import { workflowStore } from '../../workflows/store';
 
 export const n8nRouter = Router();
 
@@ -15,57 +14,35 @@ interface WorkflowResult {
 }
 
 n8nRouter.post('/run', requireAuth, async (req, res) => {
-  const webhooks = config.n8n.webhooks;
-  const names = Object.keys(webhooks);
-  if (names.length === 0) {
+  const requested = String(req.query['name'] ?? '').trim();
+  const all = workflowStore.list();
+  const enabled = all.filter((workflow) => workflow.enabled);
+
+  if (all.length === 0) {
     res.status(503).json({ status: 'disabled' });
     return;
   }
 
-  const requested = String(req.query['name'] ?? '').trim();
-  if (requested && !(requested in webhooks)) {
-    res.status(404).json({ error: 'Unknown workflow', available: names.sort() });
+  let targets = requested ? enabled.filter((workflow) => workflow.name === requested) : enabled;
+  if (requested && targets.length === 0) {
+    res.status(404).json({
+      error: 'Unknown workflow',
+      available: enabled.map((workflow) => workflow.name).sort(),
+    });
     return;
   }
+  targets = [...targets];
 
-  const targets = requested ? [requested] : names;
-  const now = Date.now() / 1000;
   const results: WorkflowResult[] = [];
-
-  for (const target of targets) {
-    const url = webhooks[target];
-    if (!url) continue;
-    const last = state.n8nLastTrigger[target] ?? 0;
-    if (config.n8n.triggerCooldownSeconds && now - last < config.n8n.triggerCooldownSeconds) {
-      results.push({ name: target, ok: false, status: 'cooldown' });
-      continue;
-    }
-    state.n8nLastTrigger[target] = now;
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), config.n8n.timeoutSeconds * 1000);
-    try {
-      const response = await fetch(url, { method: 'POST', signal: controller.signal });
-      const body = await response.text();
-      const ok = response.status < 400;
-      logger.info(`n8n-Workflow '${target}' gestartet (HTTP ${response.status})`);
-      results.push({
-        name: target,
-        ok,
-        http_status: response.status,
-        response: body.slice(0, 200),
-      });
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        logger.warn(`n8n-Workflow '${target}': Timeout nach ${config.n8n.timeoutSeconds}s`);
-        results.push({ name: target, ok: false, status: 'timeout' });
-      } else {
-        logger.warn(`n8n-Workflow '${target}' fehlgeschlagen: ${String(error)}`);
-        results.push({ name: target, ok: false, status: 'error' });
-      }
-    } finally {
-      clearTimeout(timer);
-    }
+  for (const workflow of targets) {
+    const outcome = await runWorkflow(workflow, { force: true });
+    results.push({
+      name: workflow.name,
+      ok: outcome.status === 'ok',
+      status: outcome.status,
+      ...(outcome.httpStatus !== undefined ? { http_status: outcome.httpStatus } : {}),
+      ...(outcome.error ? { response: outcome.error } : {}),
+    });
   }
 
   const started = results.filter((result) => result.ok);

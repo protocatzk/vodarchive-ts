@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { config } from '../../config';
 import { rssArchiver } from '../../rss/archiver';
+import { settingsStore } from '../../settings/store';
 import { state } from '../../state';
 import { requireAuth } from '../middleware/auth';
 
@@ -35,17 +36,18 @@ systemRouter.post('/jobs/cancel', requireAuth, (req, res) => {
 });
 
 export function healthHandler(_req: Request, res: Response): void {
+  const settings = settingsStore.get();
   res.json({
     status: 'ok',
     bot: 'Ripperbot',
     busy: Boolean(state.activeJob),
     queue_length: state.waitingQueue.length,
-    split_threshold_mb: 1800,
-    target_part_size_mb: 1400,
-    parallel_workers: config.upload.parallelWorkers,
-    chat_id: config.telegram.defaultChatId,
-    forum_chat_id: config.telegram.defaultForumChatId,
-    forward_drop_author: config.telegram.forwardDropAuthor,
+    split_threshold_mb: Math.round(settings.upload.splitThresholdBytes / (1024 ** 2)),
+    target_part_size_mb: Math.round(settings.upload.targetPartSizeBytes / (1024 ** 2)),
+    parallel_workers: settings.jobs.parallelWorkers,
+    chat_id: settings.telegram.chatId,
+    forum_chat_id: settings.telegram.forumChatId,
+    forward_drop_author: settings.telegram.forwardDropAuthor,
     telegram_connected: state.gateway.isConnected(),
     rss: rssArchiver.summary(),
   });

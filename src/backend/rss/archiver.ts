@@ -4,19 +4,13 @@ import path from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { config } from '../config';
 import { logger } from '../logger';
+import { settingsStore } from '../settings/store';
+import { sourceStore, type Source } from '../sources/store';
 
 /**
- * RSS-Archiv (rss.app) – liest RSS-/Atom-Feeds (optional aus OPML), filtert
- * neue Eintraege und uebergibt sie per Callback an die Upload-Pipeline.
+ * RSS-Archiv: liest Quellen aus dem persistenten SourceStore (RSS oder OPML),
+ * filtert neue Eintraege und uebergibt sie an die Upload-Pipeline.
  */
-
-export interface RssFeedInfo {
-  title: string;
-  url: string;
-  source_url: string | null;
-  bundle: boolean;
-  child_count: number;
-}
 
 export interface RssItem {
   key: string;
@@ -45,10 +39,22 @@ export interface RssItemEntry {
 interface RssState {
   feeds: Record<string, { c?: number; o?: boolean; e?: string; n?: number }>;
   items: Record<string, RssItemEntry>;
+  seen_feeds: Record<string, boolean>;
   baseline_done?: boolean;
 }
 
-const EMPTY_STATE: RssState = { feeds: {}, items: {}, baseline_done: false };
+interface FeedRuntime {
+  url: string;
+  title: string;
+  sourceId: string;
+  sourceName: string;
+  lastCheck: number | null;
+  ok: boolean | null;
+  error: string | null;
+  items: number;
+}
+
+const EMPTY_STATE: RssState = { feeds: {}, items: {}, seen_feeds: {} };
 
 function hostOf(url: string): string {
   try {
@@ -96,24 +102,44 @@ function makeItemKey(url: string): string {
   return crypto.createHash('sha1').update(url).digest('hex').slice(0, 16);
 }
 
-export class RssArchiver {
-  readonly enabled = config.rss.enabled;
-  private readonly opmlFile = config.rss.opmlFile;
-  private readonly interval = config.rss.pollIntervalSeconds;
-  private readonly maxRetries = config.rss.maxRetries;
-  private readonly retryBaseSeconds = config.rss.retryBaseSeconds;
-  private readonly retryMaxDelaySeconds = config.rss.retryMaxDelaySeconds;
-  private readonly liveRecheckSeconds = config.rss.liveRecheckSeconds;
-  private readonly liveMaxAgeDays = config.rss.liveMaxAgeDays;
-  private readonly retryMaxAgeDays = config.rss.retryMaxAgeDays;
-  private readonly maxItemsPerPoll = config.rss.maxItemsPerPoll;
-  private readonly maxItemAgeHours = config.rss.maxItemAgeHours;
-  private readonly initialBackfill = config.rss.initialBackfill;
+function nowSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
 
+function toArray(value: unknown): unknown[] {
+  if (value === null || value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function extractOutlines(node: unknown): Array<Record<string, unknown>> {
+  const result: Array<Record<string, unknown>> = [];
+  for (const entry of toArray(node)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const record = entry as Record<string, unknown>;
+    result.push(record);
+    if (record['outline']) result.push(...extractOutlines(record['outline']));
+  }
+  return result;
+}
+
+function platformFromHost(url: string): string {
+  const host = hostOf(url).toLowerCase();
+  if (host.includes('youtube') || host.includes('youtu.be')) return 'youtube';
+  if (host.includes('twitch')) return 'twitch';
+  if (host.includes('tiktok')) return 'tiktok';
+  if (host.includes('instagram')) return 'instagram';
+  if (host.includes('twitter') || host === 'x.com') return 'twitter';
+  if (host.includes('kick')) return 'kick';
+  if (host.includes('rumble')) return 'rumble';
+  if (host.includes('odysee')) return 'odysee';
+  return 'rss';
+}
+
+export class RssArchiver {
   onItem: ((item: RssItem) => Promise<void>) | null = null;
 
-  private feeds: RssFeedInfo[] = [];
   private state: RssState;
+  private feedRuntime = new Map<string, FeedRuntime>();
   private running = false;
   private blockedUntil = 0;
   private timer: NodeJS.Timeout | null = null;
@@ -128,43 +154,6 @@ export class RssArchiver {
 
   constructor() {
     this.state = this.loadState();
-    this.feeds = this.resolveFeeds();
-  }
-
-  // ------------------------------------------------------------------ setup
-
-  private resolveFeeds(): RssFeedInfo[] {
-    const feeds: RssFeedInfo[] = [];
-    const seen = new Set<string>();
-
-    const add = (title: string, url: string): void => {
-      if (!url || seen.has(url)) return;
-      seen.add(url);
-      feeds.push({ title: title || hostOf(url), url, source_url: null, bundle: false, child_count: 0 });
-    };
-
-    config.rss.feedUrls.forEach((url, index) => {
-      add(config.rss.feedTitles[index] ?? '', url);
-    });
-
-    if (this.opmlFile && fs.existsSync(this.opmlFile)) {
-      try {
-        const xml = fs.readFileSync(this.opmlFile, 'utf8');
-        const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-        const doc = parser.parse(xml) as Record<string, unknown>;
-        const body = (doc['opml'] as Record<string, unknown> | undefined)?.['body'];
-        const outlines = extractOutlines(body);
-        for (const outline of outlines) {
-          const url = String(outline['@_xmlUrl'] ?? '').trim();
-          const title = String(outline['@_title'] ?? outline['@_text'] ?? '').trim();
-          add(title, url);
-        }
-      } catch (error) {
-        logger.warn(`OPML-Datei konnte nicht gelesen werden: ${String(error)}`);
-      }
-    }
-
-    return feeds;
   }
 
   private loadState(): RssState {
@@ -174,6 +163,7 @@ export class RssArchiver {
       return {
         feeds: parsed.feeds ?? {},
         items: parsed.items ?? {},
+        seen_feeds: parsed.seen_feeds ?? {},
         baseline_done: parsed.baseline_done ?? false,
       };
     } catch {
@@ -230,23 +220,41 @@ export class RssArchiver {
     };
   }
 
+  private feedList(): FeedRuntime[] {
+    if (this.feedRuntime.size > 0) return Array.from(this.feedRuntime.values());
+    // Vor dem ersten Poll: konfigurierte RSS-Quellen als Platzhalter zeigen.
+    return sourceStore
+      .list()
+      .filter((source) => source.type === 'rss')
+      .map((source) => ({
+        url: source.url,
+        title: source.name,
+        sourceId: source.id,
+        sourceName: source.name,
+        lastCheck: source.lastCheck,
+        ok: source.lastOk,
+        error: source.lastError,
+        items: source.lastItems,
+      }));
+  }
+
   status(): Record<string, unknown> {
-    const feeds = this.feeds.map((feed) => {
-      const info = this.state.feeds[feed.url] ?? {};
-      return {
-        title: feed.title,
-        bundle: feed.bundle,
-        child_count: feed.child_count,
-        host: hostOf(feed.source_url ?? feed.url),
-        last_check: info.c ?? null,
-        ok: info.o ?? null,
-        error: info.e ?? null,
-        items: info.n ?? 0,
-      };
-    });
+    const settings = settingsStore.get().rss;
+    const feeds = this.feedList().map((feed) => ({
+      title: feed.title,
+      bundle: false,
+      child_count: 0,
+      host: hostOf(feed.url),
+      source_id: feed.sourceId,
+      source_name: feed.sourceName,
+      last_check: feed.lastCheck,
+      ok: feed.ok,
+      error: feed.error,
+      items: feed.items,
+    }));
 
     return {
-      enabled: this.enabled,
+      enabled: settings.enabled,
       running: this.running,
       polling: this.running,
       processing: this.running,
@@ -256,19 +264,19 @@ export class RssArchiver {
       cookies: this.cookiesStatus(),
       pot_provider_url: config.ytdlp.potProviderUrl,
       proxy_enabled: Boolean(config.ytdlp.proxy),
-      interval_seconds: this.interval,
-      max_retries: this.maxRetries,
-      retry_base_seconds: this.retryBaseSeconds,
-      retry_max_delay_seconds: this.retryMaxDelaySeconds,
-      live_recheck_seconds: this.liveRecheckSeconds,
-      live_max_age_days: this.liveMaxAgeDays,
-      retry_max_age_days: this.retryMaxAgeDays,
+      interval_seconds: settings.pollIntervalSeconds,
+      max_retries: settings.maxRetries,
+      retry_base_seconds: config.rss.retryBaseSeconds,
+      retry_max_delay_seconds: config.rss.retryMaxDelaySeconds,
+      live_recheck_seconds: config.rss.liveRecheckSeconds,
+      live_max_age_days: config.rss.liveMaxAgeDays,
+      retry_max_age_days: config.rss.retryMaxAgeDays,
       max_retries_per_poll: config.rss.maxRetriesPerPoll,
       ytdlp_concurrent_fragments: config.ytdlp.concurrentFragments,
       ytdlp_retries: config.ytdlp.retries,
-      opml_file: this.opmlFile,
-      opml_found: Boolean(this.opmlFile && fs.existsSync(this.opmlFile)),
-      feed_titles: this.feeds.map((feed) => feed.title),
+      opml_file: config.rss.opmlFile,
+      opml_found: Boolean(config.rss.opmlFile && fs.existsSync(config.rss.opmlFile)),
+      feed_titles: feeds.map((feed) => feed.title),
       last_poll_started: this.lastPollStarted,
       last_poll_finished: this.lastPollFinished,
       last_trigger: this.lastTrigger,
@@ -282,15 +290,16 @@ export class RssArchiver {
   }
 
   summary(): Record<string, unknown> {
+    const settings = settingsStore.get().rss;
     return {
-      enabled: this.enabled,
+      enabled: settings.enabled,
       running: this.running,
       polling: this.running,
       processing: this.running,
       queue: 0,
       blocked_until: this.blockedUntil,
-      interval_seconds: this.interval,
-      feeds: this.feeds.length,
+      interval_seconds: settings.pollIntervalSeconds,
+      feeds: this.feedList().length,
       last_poll_finished: this.lastPollFinished,
       last_error: this.lastError,
       counts: this.counts(),
@@ -309,12 +318,19 @@ export class RssArchiver {
   triggerBackfill(limit = 10): boolean {
     if (this.running) return false;
     this.lastTrigger = 'backfill';
-    void this.poll('backfill', Math.max(1, limit));
+    void this.poll('backfill', undefined, Math.max(1, limit));
+    return true;
+  }
+
+  triggerSource(sourceId: string): boolean {
+    if (this.running) return false;
+    this.lastTrigger = `source:${sourceId}`;
+    void this.poll('manual', [sourceId]);
     return true;
   }
 
   resetRetries(): number {
-    const now = Math.floor(Date.now() / 1000);
+    const now = nowSeconds();
     let reset = 0;
     for (const entry of Object.values(this.state.items)) {
       if (entry.s === 'retry') {
@@ -331,9 +347,36 @@ export class RssArchiver {
     return reset;
   }
 
-  // ------------------------------------------------------------------ polling
+  /** Prueft eine Quelle ohne sie zu speichern (fuer die UI). */
+  async preview(
+    type: 'rss' | 'opml',
+    url: string,
+  ): Promise<{ ok: boolean; feeds: number; items: number; error?: string }> {
+    try {
+      if (type === 'rss') {
+        const xml = await this.fetchText(url);
+        const items = this.parseItems('preview', xml);
+        return { ok: true, feeds: 1, items: items.length };
+      }
+      const xml = await this.fetchText(url);
+      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+      const doc = parser.parse(xml) as Record<string, unknown>;
+      const body = (doc['opml'] as Record<string, unknown> | undefined)?.['body'];
+      const feeds = extractOutlines(body)
+        .map((outline) => String(outline['@_xmlUrl'] ?? '').trim())
+        .filter(Boolean);
+      return { ok: feeds.length > 0, feeds: feeds.length, items: 0 };
+    } catch (error) {
+      return { ok: false, feeds: 0, items: 0, error: (error as Error).message };
+    }
+  }
+
+  // ------------------------------------------------------------------ fetching
 
   private async fetchText(url: string): Promise<string> {
+    if (!/^https?:\/\//i.test(url)) {
+      return fs.readFileSync(url, 'utf8');
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     try {
@@ -349,7 +392,30 @@ export class RssArchiver {
     }
   }
 
-  private parseItems(feed: RssFeedInfo, xml: string): RssItem[] {
+  private async expandSource(source: Source): Promise<Array<{ title: string; url: string }>> {
+    if (source.type === 'rss') {
+      return [{ title: source.name, url: source.url }];
+    }
+    const xml = await this.fetchText(source.url);
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+    const doc = parser.parse(xml) as Record<string, unknown>;
+    const body = (doc['opml'] as Record<string, unknown> | undefined)?.['body'];
+    const feeds: Array<{ title: string; url: string }> = [];
+    const seen = new Set<string>();
+    for (const outline of extractOutlines(body)) {
+      const url = String(outline['@_xmlUrl'] ?? '').trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      feeds.push({
+        title: String(outline['@_title'] ?? outline['@_text'] ?? hostOf(url) ?? url).trim(),
+        url,
+      });
+    }
+    if (feeds.length === 0) throw new Error('OPML enthält keine Feeds.');
+    return feeds;
+  }
+
+  private parseItems(feedTitle: string, xml: string): RssItem[] {
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',
@@ -360,7 +426,7 @@ export class RssArchiver {
     const channel = rss?.['channel'] as Record<string, unknown> | undefined;
     const atom = doc['feed'] as Record<string, unknown> | undefined;
 
-    const channelTitle = textOf(channel?.['title']) || textOf(atom?.['title']) || feed.title;
+    const channelTitle = textOf(channel?.['title']) || textOf(atom?.['title']) || feedTitle;
     const rawItems: unknown[] = toArray(channel?.['item'] ?? atom?.['entry']);
 
     const items: RssItem[] = [];
@@ -388,7 +454,9 @@ export class RssArchiver {
       const media = record['media:content'] as Record<string, unknown> | undefined;
       const thumbnail =
         String(media?.['@_url'] ?? '').trim() ||
-        String((record['media:thumbnail'] as Record<string, unknown> | undefined)?.['@_url'] ?? '').trim() ||
+        String(
+          (record['media:thumbnail'] as Record<string, unknown> | undefined)?.['@_url'] ?? '',
+        ).trim() ||
         null;
 
       const key = makeItemKey(url);
@@ -421,11 +489,12 @@ export class RssArchiver {
     } catch (error) {
       const message = (error as Error).message;
       this.lastError = message;
-      if (this.maxRetries === 0 || (this.state.items[item.key]?.r ?? 0) < this.maxRetries) {
+      const maxRetries = settingsStore.get().rss.maxRetries;
+      if (maxRetries === 0 || (this.state.items[item.key]?.r ?? 0) < maxRetries) {
         const attempts = (this.state.items[item.key]?.r ?? 0) + 1;
         const delay = Math.min(
-          this.retryMaxDelaySeconds,
-          this.retryBaseSeconds * 2 ** (attempts - 1),
+          config.rss.retryMaxDelaySeconds,
+          config.rss.retryBaseSeconds * 2 ** (attempts - 1),
         );
         this.state.items[item.key] = {
           s: 'retry',
@@ -444,7 +513,8 @@ export class RssArchiver {
   }
 
   private async retryDue(): Promise<void> {
-    if (!this.onItem || this.maxRetries === 0) return;
+    const settings = settingsStore.get().rss;
+    if (!this.onItem || settings.maxRetries === 0) return;
     const now = nowSeconds();
     let retried = 0;
     for (const [key, entry] of Object.entries(this.state.items)) {
@@ -471,70 +541,135 @@ export class RssArchiver {
     }
   }
 
-  private async poll(trigger: 'manual' | 'backfill' | 'interval', backfillLimit?: number): Promise<void> {
-    if (this.running || !this.enabled) return;
+  private isDue(source: Source, now: number, defaultInterval: number): boolean {
+    const interval = source.pollIntervalSeconds ?? defaultInterval;
+    if (source.lastCheck === null) return true;
+    return source.lastCheck + interval <= now;
+  }
+
+  private recordFeed(
+    feed: { title: string; url: string },
+    source: Source,
+    data: { ok: boolean; error: string | null; items: number; at: number },
+  ): void {
+    this.feedRuntime.set(feed.url, {
+      url: feed.url,
+      title: feed.title,
+      sourceId: source.id,
+      sourceName: source.name,
+      lastCheck: data.at,
+      ok: data.ok,
+      error: data.error,
+      items: data.items,
+    });
+  }
+
+  private async poll(
+    trigger: 'manual' | 'backfill' | 'interval',
+    sourceIds?: string[],
+    backfillLimit?: number,
+  ): Promise<void> {
+    const settings = settingsStore.get().rss;
+    if (this.running || !settings.enabled) return;
+
+    const allSources = sourceStore.listEnabled();
+    const candidates = sourceIds
+      ? allSources.filter((source) => sourceIds.includes(source.id))
+      : allSources;
+    const now = nowSeconds();
+    const selected =
+      trigger === 'interval'
+        ? candidates.filter((source) =>
+            this.isDue(source, now, settings.pollIntervalSeconds),
+          )
+        : candidates;
+
+    if (selected.length === 0) return;
+
     this.running = true;
-    this.lastPollStarted = nowSeconds();
+    this.lastPollStarted = now;
     this.lastError = null;
 
-    const allowBaseline = !this.state.baseline_done && trigger !== 'backfill' && !this.initialBackfill;
-    const limit = trigger === 'backfill' ? backfillLimit ?? this.maxItemsPerPoll : this.maxItemsPerPoll;
+    const limit =
+      trigger === 'backfill' ? backfillLimit ?? settings.maxItemsPerPoll : settings.maxItemsPerPoll;
     let archived = 0;
     let skipped = 0;
     let failed = 0;
 
     try {
-      if (this.feeds.length === 0) {
-        logger.warn('RSS-Poll: keine Feeds konfiguriert (RSS_FEED_URLS/OPML leer).');
-      }
-
       await this.retryDue();
 
-      for (const feed of this.feeds) {
+      for (const source of selected) {
         try {
-          const xml = await this.fetchText(feed.url);
-          const items = this.parseItems(feed, xml);
-          this.state.feeds[feed.url] = { c: nowSeconds(), o: true, n: items.length };
+          const feeds = await this.expandSource(source);
+          let sourceItems = 0;
+          for (const feed of feeds) {
+            const xml = await this.fetchText(feed.url);
+            const items = this.parseItems(feed.title, xml);
+            sourceItems += items.length;
+            const firstSeen = !this.state.seen_feeds[feed.url];
+            const at = nowSeconds();
+            this.recordFeed(feed, source, { ok: true, error: null, items: items.length, at });
 
-          for (const item of items) {
-            if (this.state.items[item.key]) continue;
+            for (const item of items) {
+              if (this.state.items[item.key]) continue;
 
-            if (allowBaseline) {
-              this.state.items[item.key] = { s: 'baseline', t: nowSeconds() };
-              continue;
-            }
-
-            if (item.published) {
-              const ageHours = (nowSeconds() - item.published) / 3600;
-              if (ageHours > this.maxItemAgeHours) {
-                this.state.items[item.key] = { s: 'skipped', t: nowSeconds() };
-                skipped += 1;
+              if (firstSeen && trigger !== 'backfill' && !settings.initialBackfill) {
+                this.state.items[item.key] = { s: 'baseline', t: at };
                 continue;
+              }
+
+              if (item.published) {
+                const ageHours = (nowSeconds() - item.published) / 3600;
+                if (ageHours > settings.maxItemAgeHours) {
+                  this.state.items[item.key] = { s: 'skipped', t: at };
+                  skipped += 1;
+                  continue;
+                }
+              }
+
+              if (archived >= limit) continue;
+
+              const archivedAsRss = await this.enqueue(item);
+              if (archivedAsRss) {
+                archived += 1;
+                sourceStore.incrementArchived(source.id);
+                logger.info(`RSS: '${item.channel}' – '${item.title}' eingereiht.`);
+              } else {
+                failed += 1;
               }
             }
 
-            if (archived >= limit) continue; // spaeteren Poll ueberlassen
-
-            try {
-              await this.processItem(item);
-              archived += 1;
-              logger.info(`RSS: '${item.channel}' – '${item.title}' eingereiht.`);
-            } catch {
-              failed += 1;
-            }
+            if (firstSeen) this.state.seen_feeds[feed.url] = true;
           }
+          sourceStore.markChecked(source.id, { ok: true, items: sourceItems });
         } catch (error) {
           const message = (error as Error).message;
-          this.state.feeds[feed.url] = { ...this.state.feeds[feed.url], c: nowSeconds(), o: false, e: message };
+          sourceStore.markChecked(source.id, { ok: false, error: message });
+          this.feedRuntime.set(`source:${source.id}`, {
+            url: source.url,
+            title: source.name,
+            sourceId: source.id,
+            sourceName: source.name,
+            lastCheck: nowSeconds(),
+            ok: false,
+            error: message,
+            items: 0,
+          });
           this.lastError = message;
-          logger.warn(`RSS-Feed ${feed.title} fehlgeschlagen: ${message}`);
+          logger.warn(`RSS-Quelle '${source.name}' fehlgeschlagen: ${message}`);
         }
       }
 
-      if (allowBaseline) this.state.baseline_done = true;
-      this.lastSummary = { trigger, archived, skipped, failed, feeds: this.feeds.length };
+      this.lastSummary = {
+        trigger,
+        sources: selected.length,
+        archived,
+        skipped,
+        failed,
+      };
       logger.info(
-        `RSS-Poll abgeschlossen: ${archived} eingereiht, ${skipped} uebersprungen, ${failed} Fehler.`,
+        `RSS-Poll abgeschlossen: ${archived} eingereiht, ${skipped} uebersprungen, ${failed} Fehler (${selected.length} Quelle(n)).`,
       );
     } catch (error) {
       this.lastError = String(error);
@@ -546,57 +681,35 @@ export class RssArchiver {
     }
   }
 
+  private async enqueue(item: RssItem): Promise<boolean> {
+    try {
+      await this.processItem(item);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // ------------------------------------------------------------------ lifecycle
 
   start(): void {
-    if (!this.enabled || this.timer) return;
+    if (this.timer) return;
     logger.info(
-      `RSS-Archiv aktiviert (Feeds: ${this.feeds.length}, Intervall: ${this.interval}s` +
-        `${this.opmlFile ? `, OPML: ${this.opmlFile}` : ''}).`,
+      `RSS-Archiv aktiv (Quellen: ${sourceStore.listEnabled().length}, Tick: 30s, ` +
+        `Intervall: ${settingsStore.get().rss.pollIntervalSeconds}s).`,
     );
     this.timer = setInterval(() => {
       void this.poll('interval');
-    }, Math.max(30, this.interval) * 1000);
+    }, 30000);
     this.timer.unref?.();
+    const initial = setTimeout(() => void this.poll('interval'), 4000);
+    initial.unref?.();
   }
 
   stop(): void {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
   }
-}
-
-function nowSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-function toArray(value: unknown): unknown[] {
-  if (value === null || value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function extractOutlines(node: unknown): Array<Record<string, unknown>> {
-  const result: Array<Record<string, unknown>> = [];
-  for (const entry of toArray(node)) {
-    if (!entry || typeof entry !== 'object') continue;
-    const record = entry as Record<string, unknown>;
-    result.push(record);
-    if (record['outline']) result.push(...extractOutlines(record['outline']));
-  }
-  return result;
-}
-
-function platformFromHost(url: string): string {
-  const host = hostOf(url).toLowerCase();
-  if (host.includes('youtube') || host.includes('youtu.be')) return 'youtube';
-  if (host.includes('twitch')) return 'twitch';
-  if (host.includes('tiktok')) return 'tiktok';
-  if (host.includes('instagram')) return 'instagram';
-  if (host.includes('twitter') || host === 'x.com') return 'twitter';
-  if (host.includes('kick')) return 'kick';
-  if (host.includes('rumble')) return 'rumble';
-  if (host.includes('odysee')) return 'odysee';
-  return 'rss';
 }
 
 export const rssArchiver = new RssArchiver();

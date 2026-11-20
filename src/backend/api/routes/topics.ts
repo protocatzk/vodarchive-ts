@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { config } from '../../config';
 import { logger } from '../../logger';
+import { settingsStore } from '../../settings/store';
 import { state } from '../../state';
 import { topicManager } from '../../topic/manager';
 import { requireAuth } from '../middleware/auth';
@@ -13,7 +14,7 @@ function jsonError(res: Response, message: string, status = 400): void {
 }
 
 function configuredForumChatId(): string {
-  return String(config.telegram.defaultForumChatId ?? '').trim();
+  return String(settingsStore.get().telegram.forumChatId ?? '').trim();
 }
 
 function topicChatIds(): string[] {
