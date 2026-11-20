@@ -47,6 +47,10 @@ Die Oberfläche ist als „Archivraum" aufgebaut:
 - **Struktur**: Masthead als Papierbogen mit Wappen, „Stand"-Vermerk und Reiternavigation; jede Sektion als abgerundetes Aktenblatt mit Reiter
 - **Bestandteile**: Karteikarten für Kennzahlen, Vorgangsbogen mit roter Aktenrandlinie, Bestandsbuch als Register, Stempel (Archiviert/In Arbeit/Fehler), Zugangsbuch für RSS, Schreibmaschinen-Protokoll
 - **Login**: Lesesaal-Ausweis (Zutrittskarte)
+- **Schriften**: Fraunces, Inter und IBM Plex Mono werden **lokal** über
+  `@fontsource` gebündelt – es gibt **keine externen Font-Requests** (kein Google
+  Fonts/CDN). Lizenzen: SIL Open Font License 1.1, abgelegt unter
+  [`public/fonts/OFL-*.txt`](./public/fonts).
 - **Tag-/Nachtmodus**: Umschalter im Kopf (und auf der Login-Seite). Die Auswahl wird in
   `localStorage` gespeichert; ohne Auswahl gilt `prefers-color-scheme`. Im Nachtmodus
   wird der Schrank abgedunkelt, Papier zu dunklem Karton, Tinte hell und Messing
