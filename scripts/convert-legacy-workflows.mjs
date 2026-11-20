@@ -10,6 +10,8 @@
  *   --dir <pfad>         Quellverzeichnis (Default: legacy/workflows)
  *   --out <pfad>         Zielverzeichnis (Default: legacy/workflows/converted)
  *   --source-id <id>     Streamrecorder-Quellen-ID (Default: <QUELLEN-ID>)
+ *   --source-map <a=id,b=id>  Quellen-IDs pro Account (kommagetrennt)
+ *   --disabled           Workflows deaktiviert anlegen (empfohlen)
  *   --interval <sek>     Intervall überschreiben
  *   --keep-chat          chat_id aus dem Legacy-Workflow übernehmen
  *   --api <basis-url>    Direkt in die App importieren (z. B. https://upload.positronium.dev)
@@ -72,6 +74,16 @@ function legacyChatId(workflow) {
   return chat ? String(chat.value ?? '').trim() : '';
 }
 
+function parseSourceMap(raw) {
+  const map = {};
+  if (!raw) return map;
+  for (const pair of String(raw).split(',')) {
+    const [account, id] = pair.split('=').map((value) => value.trim());
+    if (account && id) map[account.toLowerCase()] = id;
+  }
+  return map;
+}
+
 function slugify(value) {
   return (
     value
@@ -132,6 +144,7 @@ async function main() {
   const dir = path.resolve(args.dir ?? 'legacy/workflows');
   const outDir = path.resolve(args.out ?? path.join(dir, 'converted'));
   const sourceId = String(args['source-id'] ?? '<QUELLEN-ID>');
+  const sourceMap = parseSourceMap(args['source-map']);
   const intervalOverride = args.interval ? Number(args.interval) : null;
 
   if (!fs.existsSync(dir)) {
@@ -173,15 +186,20 @@ async function main() {
     const account = accountName(workflow);
     const interval = intervalOverride ?? scheduleSeconds(workflow) ?? 900;
     const chatId = legacyChatId(workflow);
+    const accountSourceId = sourceMap[account.toLowerCase()] ?? sourceId;
+    if (Object.keys(sourceMap).length > 0 && !sourceMap[account.toLowerCase()]) {
+      console.warn(`  ! Kein --source-map-Eintrag für ${account}, nutze --source-id`);
+    }
     const definition = buildDefinition({
       interval,
-      sourceId,
+      sourceId: accountSourceId,
       keepChat: Boolean(args['keep-chat']),
       chatId,
     });
     const payload = {
       name: `Streamrecorder – ${account}`,
       kind: 'internal',
+      ...(args.disabled ? { enabled: false } : {}),
       definition,
     };
 
@@ -209,8 +227,8 @@ async function main() {
   console.log(`\n${converted} konvertiert, ${skipped} übersprungen.`);
   if (!args['dry-run'] && converted > 0) {
     console.log(`Ziel: ${path.relative(process.cwd(), outDir)}`);
-    if (sourceId === '<QUELLEN-ID>') {
-      console.log('Hinweis: --source-id <ID> setzen, damit die Workflows laufen.');
+    if (sourceId === '<QUELLEN-ID>' && Object.keys(sourceMap).length === 0) {
+      console.log('Hinweis: --source-id <ID> oder --source-map … setzen, damit die Workflows laufen.');
     }
   }
 }
