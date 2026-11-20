@@ -1,0 +1,19 @@
+{
+  "name": "vodarchive-ts",
+  "version": "1.0.0",
+  "description": "Telegram-Archiv fuer Streamrecorder-VODs (per n8n) und fuer rss.app-Feeds.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}
