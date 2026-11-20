@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { api, endpoints, errorMessage } from '../lib/api';
-import type { N8nDiscoveredWorkflow, Workflow } from '../types';
+import type {
+  ExecutionRecord,
+  N8nDiscoveredWorkflow,
+  Workflow,
+  WorkflowDefinition,
+} from '../types';
 
 export const useWorkflowsStore = defineStore('workflows', () => {
   const workflows = ref<Workflow[]>([]);
@@ -12,6 +17,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
   const discovering = ref(false);
   const discoverError = ref('');
   const n8nConfigured = ref<boolean | null>(null);
+  const executions = ref<ExecutionRecord[]>([]);
 
   async function load(): Promise<void> {
     loading.value = true;
@@ -29,8 +35,10 @@ export const useWorkflowsStore = defineStore('workflows', () => {
 
   async function add(input: {
     name: string;
-    webhookUrl: string;
-    intervalSeconds: number;
+    webhookUrl?: string;
+    intervalSeconds?: number;
+    kind?: 'webhook' | 'internal';
+    definition?: WorkflowDefinition;
   }): Promise<void> {
     await api.post(endpoints.workflows(), input);
     await load();
@@ -104,6 +112,17 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     return data.imported;
   }
 
+  async function loadExecutions(): Promise<void> {
+    const { data } = await api.get<{ executions: ExecutionRecord[] }>(endpoints.executions());
+    executions.value = data.executions;
+  }
+
+  async function clearExecutions(): Promise<number> {
+    const { data } = await api.delete<{ removed: number }>(endpoints.executions());
+    executions.value = [];
+    return data.removed;
+  }
+
   return {
     workflows,
     loading,
@@ -112,6 +131,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     discovering,
     discoverError,
     n8nConfigured,
+    executions,
     load,
     add,
     update,
@@ -121,5 +141,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     discover,
     setActive,
     importWorkflow,
+    loadExecutions,
+    clearExecutions,
   };
 });

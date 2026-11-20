@@ -42,4 +42,6 @@ export interface TelegramGateway {
     meta: VideoMetadata | null,
     onProgress?: (progress: UploadProgress) => void,
   ): Promise<number>;
+  /** Einfache Textnachricht (z. B. Workflow-Benachrichtigung). */
+  sendMessage?(chatId: number | string, text: string): Promise<void>;
 }

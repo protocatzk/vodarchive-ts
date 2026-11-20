@@ -1,5 +1,7 @@
 import { logger } from '../logger';
 import { settingsStore } from '../settings/store';
+import { executionStore } from './executions';
+import { runInternalWorkflow } from './engine';
 import { workflowStore, type Workflow, type WorkflowStatus } from './store';
 
 export interface TriggerOutcome {
@@ -30,6 +32,27 @@ export async function runWorkflow(
   }
 
   running.add(workflow.id);
+  const nowAtStart = Math.floor(Date.now() / 1000);
+
+  if (workflow.kind === 'internal') {
+    try {
+      const result = await runInternalWorkflow(
+        workflow,
+        options.force ? 'manual' : 'schedule',
+      );
+      workflowStore.markRun(workflow.id, {
+        status: result.status === 'ok' ? 'ok' : 'failed',
+        error: result.error ?? null,
+        at: nowAtStart,
+      });
+      return result.status === 'ok'
+        ? { status: 'ok' }
+        : { status: 'failed', error: result.error };
+    } finally {
+      running.delete(workflow.id);
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), Math.max(1, n8n.timeoutSeconds) * 1000);
 

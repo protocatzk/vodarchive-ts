@@ -377,4 +377,9 @@ export class GramJsTelegramGateway implements TelegramGateway {
 
     return message.id;
   }
+
+  async sendMessage(chatId: number | string, text: string): Promise<void> {
+    const client = this.requireClient();
+    await client.sendMessage(coerceChat(chatId), { message: text });
+  }
 }

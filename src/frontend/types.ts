@@ -174,10 +174,27 @@ export interface Source {
 
 export type WorkflowStatus = 'ok' | 'failed' | 'timeout' | 'cooldown';
 
+export type WorkflowKind = 'webhook' | 'internal';
+
+export interface WorkflowStep {
+  id?: string;
+  type: string;
+  name?: string;
+  continueOnError?: boolean;
+  [key: string]: unknown;
+}
+
+export interface WorkflowDefinition {
+  trigger: { type: 'manual' | 'schedule'; intervalSeconds?: number };
+  steps: WorkflowStep[];
+}
+
 export interface Workflow {
   id: string;
   name: string;
+  kind: WorkflowKind;
   webhookUrl: string;
+  definition?: WorkflowDefinition;
   enabled: boolean;
   intervalSeconds: number;
   createdAt: string;
@@ -186,6 +203,29 @@ export interface Workflow {
   lastHttpStatus: number | null;
   lastError: string | null;
   runCount: number;
+}
+
+export interface ExecutionStepLog {
+  id: string;
+  type: string;
+  name?: string;
+  status: 'ok' | 'error' | 'skipped';
+  startedAt: number;
+  finishedAt: number;
+  error?: string;
+  output?: unknown;
+}
+
+export interface ExecutionRecord {
+  id: string;
+  workflowId: string;
+  workflowName: string;
+  trigger: string;
+  startedAt: number;
+  finishedAt: number | null;
+  status: 'running' | 'success' | 'failed';
+  error?: string;
+  steps: ExecutionStepLog[];
 }
 
 export interface N8nDiscoveredWorkflow {

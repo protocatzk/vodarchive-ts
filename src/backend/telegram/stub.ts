@@ -45,4 +45,9 @@ export class UnconfiguredTelegramGateway implements TelegramGateway {
     logger.warn('Telegram ist nicht verbunden (keine Zugangsdaten konfiguriert).');
     throw new Error('Telegram-Client ist noch nicht verbunden.');
   }
+
+  async sendMessage(): Promise<void> {
+    logger.warn('Telegram ist nicht verbunden (keine Zugangsdaten konfiguriert).');
+    throw new Error('Telegram-Client ist noch nicht verbunden.');
+  }
 }

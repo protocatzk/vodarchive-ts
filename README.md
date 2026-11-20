@@ -24,6 +24,7 @@ Referenz unter [`legacy/`](./legacy).
 | n8n-API-Discovery/-Verwaltung | ✅ implementiert |
 | yt-dlp-Discovery für Kanäle/Playlists | ✅ implementiert |
 | Streamrecorder als native Quelle (ersetzt n8n-Workflows) | ✅ implementiert |
+| Interner Workflow-Motor (JSON, ohne n8n) | ✅ implementiert |
 | Persistente Job-History (`data/history.json`) | ✅ implementiert |
 
 > Hinweis: Die Medien-Pipeline benötigt `ffmpeg`/`ffprobe` (und `yt-dlp` für
@@ -155,8 +156,11 @@ Kompatibel zum Original unter `/voduploader/...`, zusätzlich als `/api/...`-Ali
 | `GET/POST/PATCH/DELETE` | `/voduploader/api/sources` | Quellenverwaltung (RSS/OPML) |
 | `POST` | `/voduploader/api/sources/test` | Quelle testen (ohne Speichern) |
 | `POST` | `/voduploader/api/sources/:id/check` | Einzelne Quelle prüfen |
-| `GET/POST/PATCH/DELETE` | `/voduploader/api/workflows` | n8n-Workflows |
-| `POST` | `/voduploader/api/workflows/:id/run` | Workflow sofort ausführen |
+| `GET/POST/PATCH/DELETE` | `/voduploader/api/workflows` | n8n-/interne Workflows |
+| `POST` | `/voduploader/api/workflows/:id/run` | Workflow ausführen |
+| `GET` | `/voduploader/api/workflows/executions` | Ausführungsprotokoll |
+| `GET` | `/voduploader/api/workflows/executions/:id` | Ausführungsdetails |
+| `DELETE` | `/voduploader/api/workflows/executions` | Protokoll leeren |
 | `GET` | `/voduploader/n8n/status` | n8n-API-Verbindung prüfen |
 | `GET` | `/voduploader/n8n/discover` | Workflows über die n8n-API auflisten |
 | `POST` | `/voduploader/n8n/import/:id` | n8n-Workflow lokal importieren |
@@ -244,6 +248,40 @@ src/
   der Browser pollt `.../auth/check` und erhält bei Freigabe ein
   `vod_session`-Cookie. Ohne verbundenen Bot antwortet der Endpoint mit `503`.
 
+## Interner Workflow-Motor (ohne n8n)
+
+Unter **Vorgänge** lassen sich interne JSON-Workflows anlegen. Sie laufen im
+Backend, brauchen kein n8n und werden im Ausführungsprotokoll dokumentiert.
+
+- **Trigger:** manuell oder Zeitplan (Intervall)
+- **Schritte:** `log`, `set`, `http.request`, `streamrecorder.recordings`,
+  `filter`, `foreach`, `enqueue_upload`, `telegram.send`, `delay`
+- **Templates:** `{{ item.title }}`, `{{ vars.foo }}`, `{{ last.id }}`,
+  `{{ env.NAME }}`
+- **Sicherheit:** keine beliebige JS-Ausführung; Streamrecorder-Cookies kommen
+  serverseitig über die gewählte Quelle (nicht im Workflow-JSON)
+
+Beispiel:
+```json
+{
+  "trigger": { "type": "schedule", "intervalSeconds": 900 },
+  "steps": [
+    { "type": "streamrecorder.recordings", "sourceId": "<QUELLEN-ID>" },
+    { "type": "filter", "where": [{ "field": "url", "op": "exists" }] },
+    { "type": "foreach", "path": "items", "steps": [
+      { "type": "enqueue_upload", "map": {
+        "download_url": "{{ item.url }}",
+        "source": "streamrecorder",
+        "recording_id": "{{ item.recordingId }}",
+        "streamer": "{{ item.streamer }}",
+        "title": "{{ item.title }}",
+        "sourceId": "<QUELLEN-ID>"
+      } }
+    ] }
+  ]
+}
+```
+
 ## Bekannte Einschränkungen
 
 - **Live-Streams:** RSS-Live-Erkennung/Re-Check ist noch nicht umgesetzt.
@@ -264,3 +302,5 @@ src/
 - **Streamrecorder:** Der Session-Cookie läuft irgendwann ab und muss in der
   Quelle erneuert werden. Die alten n8n-Exporte enthielten echte Cookies/JWTs –
   bitte nach dem Umstieg die Streamrecorder-Session rotieren.
+- **Interner Motor:** Trigger aktuell manuell/Zeitplan (kein eingehender
+  Webhook); keine freie JS-Ausführung. Neue Schritt-Typen werden im Code ergänzt.
