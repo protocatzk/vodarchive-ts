@@ -44,4 +44,6 @@ export interface TelegramGateway {
   ): Promise<number>;
   /** Einfache Textnachricht (z. B. Workflow-Benachrichtigung). */
   sendMessage?(chatId: number | string, text: string): Promise<void>;
+  /** Sucht ein bestehendes Forum-Topic anhand des Titels. */
+  findForumTopicByTitle?(chatId: number | string, title: string): Promise<number | null>;
 }

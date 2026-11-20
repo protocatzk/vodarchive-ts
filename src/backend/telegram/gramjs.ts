@@ -302,7 +302,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
     if (!topicId) {
       for (let attempt = 0; attempt < 3 && !topicId; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 800 : 1500));
-        topicId = (await this.findForumTopicByTitle(channel, cleanTitle)) ?? undefined;
+        topicId = (await this.lookupForumTopic(channel, cleanTitle)) ?? undefined;
       }
     }
 
@@ -314,7 +314,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
   }
 
   /** Sucht ein Forum-Topic anhand seines Titels (Fallback nach dem Anlegen). */
-  private async findForumTopicByTitle(
+  private async lookupForumTopic(
     channel: Api.TypeEntityLike,
     title: string,
   ): Promise<number | null> {
@@ -429,6 +429,11 @@ export class GramJsTelegramGateway implements TelegramGateway {
     });
 
     return message.id;
+  }
+
+  async findForumTopicByTitle(chatId: number | string, title: string): Promise<number | null> {
+    const channel = await this.resolve(chatId);
+    return this.lookupForumTopic(channel, title);
   }
 
   async sendMessage(chatId: number | string, text: string): Promise<void> {

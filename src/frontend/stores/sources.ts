@@ -95,6 +95,23 @@ export const useSourcesStore = defineStore('sources', () => {
     }
   }
 
+  async function ensureTopics(id: string): Promise<{
+    ok: boolean;
+    chatId?: string;
+    created?: number;
+    existing?: number;
+    failed?: number;
+    streamers?: Array<{ name: string; topicId?: number; existing?: boolean; error?: string }>;
+    error?: string;
+  }> {
+    try {
+      const { data } = await api.post(endpoints.sourceEnsureTopics(id));
+      return data;
+    } catch (err) {
+      return { ok: false, error: errorMessage(err, 'Themen konnten nicht angelegt werden') };
+    }
+  }
+
   async function test(
     type: SourceType,
     url: string,
@@ -110,5 +127,5 @@ export const useSourcesStore = defineStore('sources', () => {
     }
   }
 
-  return { sources, loading, error, load, add, update, remove, check, preview, test };
+  return { sources, loading, error, load, add, update, remove, check, preview, ensureTopics, test };
 });

@@ -52,8 +52,13 @@ interface PreviewItem {
 const previewOpen = ref(false);
 const previewLoading = ref(false);
 const previewName = ref('');
+const previewSourceId = ref('');
 const previewInfo = ref('');
 const previewItems = ref<PreviewItem[]>([]);
+const ensuringTopics = ref(false);
+const previewStreamers = computed(
+  () => new Set(previewItems.value.map((item) => item.streamer)).size,
+);
 
 const editing = ref<Source | null>(null);
 const savingEdit = ref(false);
@@ -256,6 +261,7 @@ async function preview(id: string, name: string): Promise<void> {
   previewOpen.value = true;
   previewLoading.value = true;
   previewName.value = name;
+  previewSourceId.value = id;
   previewInfo.value = '';
   previewItems.value = [];
   const result = await store.preview(id);
@@ -265,6 +271,27 @@ async function preview(id: string, name: string): Promise<void> {
     previewInfo.value = `${result.total ?? 0} Aufnahmen · ${result.targets ?? 0} Targets`;
   } else {
     previewInfo.value = result.error ?? 'Vorschau fehlgeschlagen';
+  }
+}
+
+async function ensureTopics(id: string, name: string): Promise<void> {
+  if (!window.confirm(`Fehlende Themen für die Streamer von '${name}' im Forum anlegen?`)) return;
+  ensuringTopics.value = true;
+  try {
+    const result = await store.ensureTopics(id);
+    if (!result.ok) {
+      show(result.error ?? 'Themen konnten nicht angelegt werden.', 'error');
+      return;
+    }
+    const failed = result.failed ?? 0;
+    show(
+      `${result.created ?? 0} neu, ${result.existing ?? 0} vorhanden${failed ? `, ${failed} Fehler` : ''}.`,
+      failed ? 'error' : 'success',
+    );
+    const firstError = result.streamers?.find((entry) => entry.error);
+    if (firstError) show(`${firstError.name}: ${firstError.error}`, 'error');
+  } finally {
+    ensuringTopics.value = false;
   }
 }
 
@@ -476,6 +503,15 @@ async function remove(id: string): Promise<void> {
                   >
                     Vorschau
                   </button>
+                  <button
+                    v-if="source.type === 'streamrecorder'"
+                    type="button"
+                    class="btn"
+                    :disabled="ensuringTopics"
+                    @click="ensureTopics(source.id, source.name)"
+                  >
+                    Themen
+                  </button>
                   <button type="button" class="btn" @click="check(source.id)">Prüfen</button>
                   <button type="button" class="btn" @click="openEdit(source)">Bearbeiten</button>
                   <button type="button" class="btn" @click="toggle(source.id, source.enabled)">
@@ -614,6 +650,16 @@ async function remove(id: string): Promise<void> {
               </tr>
             </tbody>
           </table>
+        </div>
+        <div v-if="previewItems.length > 0" class="mt-4 flex justify-end">
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="ensuringTopics"
+            @click="ensureTopics(previewSourceId, previewName)"
+          >
+            Themen anlegen ({{ previewStreamers }})
+          </button>
         </div>
       </div>
     </div>

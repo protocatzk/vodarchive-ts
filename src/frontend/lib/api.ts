@@ -27,6 +27,7 @@ export const endpoints = {
   source: (id: string) => `${API_BASE}/sources/${encodeURIComponent(id)}`,
   sourceCheck: (id: string) => `${API_BASE}/sources/${encodeURIComponent(id)}/check`,
   sourcePreview: (id: string) => `${API_BASE}/sources/${encodeURIComponent(id)}/preview`,
+  sourceEnsureTopics: (id: string) => `${API_BASE}/sources/${encodeURIComponent(id)}/ensure-topics`,
   workflows: () => `${API_BASE}/workflows`,
   workflow: (id: string) => `${API_BASE}/workflows/${encodeURIComponent(id)}`,
   workflowRun: (id: string) => `${API_BASE}/workflows/${encodeURIComponent(id)}/run`,

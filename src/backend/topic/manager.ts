@@ -260,7 +260,30 @@ export class TopicManager {
       return matched;
     }
 
-    // 2. Neues Topic anlegen
+    // 2. In Telegram nach einem bestehenden Topic mit gleichem Titel suchen
+    if (gateway.findForumTopicByTitle) {
+      try {
+        const existingId = await gateway.findForumTopicByTitle(forumChatId, normalizedTitle);
+        if (existingId) {
+          logger.info(
+            `Topic '${normalizedTitle}' in Telegram gefunden (ID ${existingId}) – Cache aktualisiert.`,
+          );
+          const chat = this.cache[chatKey] as Record<string, number>;
+          chat[lookupKey] = existingId;
+          if (lookupKey.startsWith('@')) chat[lookupKey.slice(1)] = existingId;
+          const strippedKey = stripPlatformSuffix(normalizedTitle).trim().toLowerCase();
+          if (strippedKey && strippedKey !== lookupKey) chat[strippedKey] = existingId;
+          this.saveCache();
+          return existingId;
+        }
+      } catch (error) {
+        logger.warn(
+          `Telegram-Topic-Suche für '${normalizedTitle}' fehlgeschlagen: ${String(error)}`,
+        );
+      }
+    }
+
+    // 3. Neues Topic anlegen
     logger.info(
       `Topic '${normalizedTitle}' nicht im Cache. Erstelle neues Forum-Topic in Chat ${forumChatId}...`,
     );

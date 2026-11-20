@@ -225,6 +225,9 @@ src/
   übergibt sie der Upload-Pipeline. Nach Erfolg wird
   `/api/user/setdownloaded` aufgerufen. Cookie wird nur serverseitig gehalten
   und in der API maskiert. Damit sind die bisherigen n8n-Workflows ersetzt.
+  Unter **Zugänge** gibt es **Vorschau** und **Themen**: fehlende Foren-Themen
+  werden vorab angelegt; dabei wird zuerst in Telegram nach dem Titel gesucht,
+  um Duplikate zu vermeiden.
 - **n8n-Workflows:** `src/backend/workflows/store.ts` + `runner.ts` –
   `data/workflows.json`, manuelles und zeitgesteuertes Auslösen der Webhooks
   (Scheduler-Tick alle 15 s, Cooldown, Timeout, Statushistorie). Der alte

@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { rssArchiver } from '../../rss/archiver';
 import { sourceStore } from '../../sources/store';
 import { fetchStreamrecorder, previewStreamrecorder } from '../../sources/streamrecorder';
+import { settingsStore } from '../../settings/store';
+import { state } from '../../state';
+import { topicManager } from '../../topic/manager';
 import { requireAuth } from '../middleware/auth';
 
 export const sourcesRouter = Router();
@@ -123,5 +126,63 @@ sourcesRouter.post('/:id/preview', async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ ok: false, error: (error as Error).message });
+  }
+});
+
+sourcesRouter.post('/:id/ensure-topics', async (req, res) => {
+  const source = sourceStore.getInternal(req.params['id'] ?? '');
+  if (!source) {
+    res.status(404).json({ error: 'Quelle nicht gefunden.' });
+    return;
+  }
+  if (source.type !== 'streamrecorder') {
+    res.status(400).json({ error: 'Themen nur für Streamrecorder-Quellen.' });
+    return;
+  }
+  if (!state.gateway.isConnected()) {
+    res.status(503).json({ error: 'Telegram-Client ist nicht verbunden.' });
+    return;
+  }
+  const chatId =
+    (source.testMode && source.testForumChatId) ||
+    settingsStore.get().telegram.forumChatId;
+  if (!chatId) {
+    res.status(400).json({ error: 'Kein Forum-Chat konfiguriert.' });
+    return;
+  }
+
+  try {
+    const result = await fetchStreamrecorder(source);
+    const names = Array.from(
+      new Set(result.items.map((item) => item.streamer.trim()).filter(Boolean)),
+    ).slice(0, 50);
+
+    const outcomes: Array<{
+      name: string;
+      topicId?: number;
+      existing?: boolean;
+      error?: string;
+    }> = [];
+
+    for (const name of names) {
+      const existing = topicManager.findCachedTopic(chatId, name) !== null;
+      try {
+        const topicId = await topicManager.getOrCreateTopic(state.gateway, chatId, name);
+        outcomes.push({ name, topicId, existing });
+      } catch (error) {
+        outcomes.push({ name, error: (error as Error).message });
+      }
+    }
+
+    res.json({
+      ok: true,
+      chatId,
+      streamers: outcomes,
+      created: outcomes.filter((entry) => !entry.existing && !entry.error).length,
+      existing: outcomes.filter((entry) => entry.existing && !entry.error).length,
+      failed: outcomes.filter((entry) => entry.error).length,
+    });
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
   }
 });
