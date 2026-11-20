@@ -140,14 +140,19 @@ src/
   OPML, parst RSS/Atom, dedupliziert über einen State, filtert nach Alter und
   reiht neue Items mit Wartezeit (`wait=true`) in die Pipeline ein; Retry mit
   Backoff.
+- **Dashboard-Login:** `GET /voduploader/api/auth/request` erzeugt ein Token und
+  einen Deep-Link `https://t.me/<bot>?start=login_<token>`. Der Bot-Handler
+  (`startAuthFlow` im GramJS-Gateway) prüft den Absender gegen
+  `ALLOWED_DASHBOARD_USERS` und sendet Inline-Buttons
+  („✅ Anmelden freigeben“ / „❌ Ablehnen“). Der Callback setzt den Token-Status;
+  der Browser pollt `.../auth/check` und erhält bei Freigabe ein
+  `vod_session`-Cookie. Ohne verbundenen Bot antwortet der Endpoint mit `503`.
 
 ## Bekannte Einschränkungen
 
-- **Login-Freigabe:** Der Browser-Login erzeugt Token + Deep-Link; die
-  Bestätigung per Telegram-Inline-Buttons (`/start login_<token>` + Callback)
-  ist noch nicht an das GramJS-Gateway angebunden. Bis dahin `AUTH_DEV_MODE=true`
-  nutzen oder die Session serverseitig setzen.
 - **Live-Streams:** RSS-Live-Erkennung/Re-Check ist noch nicht umgesetzt.
 - **ffmpeg-Split:** nutzt Stream-Copy; Schnittpunkte hängen von Keyframes ab.
 - **RSS-Status „archived"** bedeutet „erfolgreich in die Pipeline eingereiht und
   Job abgeschlossen" (der Handler wartet auf das Job-Ergebnis).
+- **Login:** benötigt einen verbundenen Bot und mindestens einen Eintrag in
+  `ALLOWED_DASHBOARD_USERS`; für lokale Entwicklung `AUTH_DEV_MODE=true` nutzen.

@@ -8,6 +8,10 @@ import type { TelegramGateway, UploadProgress, VideoMetadata } from './gateway';
 export class UnconfiguredTelegramGateway implements TelegramGateway {
   readonly name = 'unconfigured';
 
+  startAuthFlow(): void {
+    // Kein Telegram verbunden – Login-Flow nicht verfügbar.
+  }
+
   isConnected(): boolean {
     return false;
   }

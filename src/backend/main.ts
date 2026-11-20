@@ -38,6 +38,7 @@ async function initTelegram(): Promise<void> {
   try {
     await gateway.connect();
     state.setGateway(gateway);
+    gateway.startAuthFlow();
     logger.info(`Telegram verbunden als @${state.botUsername || '?'}.`);
   } catch (error) {
     logger.error(`Telegram-Verbindung fehlgeschlagen: ${String(error)}`);

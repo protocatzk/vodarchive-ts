@@ -37,6 +37,15 @@ authRouter.post('/request', (req, res) => {
   }
 
   cleanupPending();
+
+  if (!state.botUsername) {
+    res.status(503).json({
+      status: 'unavailable',
+      error: 'Telegram-Bot ist nicht verbunden – Login derzeit nicht möglich.',
+    });
+    return;
+  }
+
   const token = crypto.randomBytes(12).toString('hex');
   const pending: PendingAuth = { status: 'pending', created_at: Date.now() / 1000, user: '' };
   state.pendingAuth.set(token, pending);

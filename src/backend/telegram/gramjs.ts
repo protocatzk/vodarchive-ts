@@ -4,8 +4,12 @@ import bigInt from 'big-integer';
 import { Api, TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { CustomFile } from 'telegram/client/uploads';
+import { NewMessage, type NewMessageEvent } from 'telegram/events';
+import { CallbackQuery, type CallbackQueryEvent } from 'telegram/events/CallbackQuery';
+import { Button } from 'telegram/tl/custom/button';
 import { config } from '../config';
 import { logger } from '../logger';
+import { state } from '../state';
 import type {
   TelegramGateway,
   UploadProgress,
@@ -54,6 +58,7 @@ export class GramJsTelegramGateway implements TelegramGateway {
   private client: TelegramClient | null = null;
   private connected = false;
   private botUsername = '';
+  private authFlowStarted = false;
 
   isConnected(): boolean {
     return this.connected;
@@ -127,6 +132,138 @@ export class GramJsTelegramGateway implements TelegramGateway {
     } catch {
       return peer;
     }
+  }
+
+  // ---------------------------------------------------------------- Auth-Flow
+
+  startAuthFlow(): void {
+    if (this.authFlowStarted) return;
+    const client = this.requireClient();
+
+    client.addEventHandler(
+      (event: NewMessageEvent) => {
+        void this.handleStart(event).catch((error) =>
+          logger.error(`Login-Handler (/start) fehlgeschlagen: ${String(error)}`),
+        );
+      },
+      new NewMessage({ pattern: /^\/start(?:\s+login_([A-Za-z0-9_-]+))?/ }),
+    );
+
+    client.addEventHandler(
+      (event: CallbackQueryEvent) => {
+        void this.handleAuthCallback(event).catch((error) =>
+          logger.error(`Login-Callback fehlgeschlagen: ${String(error)}`),
+        );
+      },
+      new CallbackQuery({ pattern: /^auth_(ok|no):/ }),
+    );
+
+    this.authFlowStarted = true;
+    logger.info('Telegram-Login-Flow aktiv (/start + Inline-Buttons).');
+  }
+
+  private isAllowedUser(user: Api.User): boolean {
+    const allowed = config.telegram.allowedDashboardUsers;
+    if (allowed.length === 0) return false;
+    const username = (user.username ?? '').toLowerCase();
+    const handle = username ? `@${username}` : '';
+    const id = String(user.id);
+    return allowed.some((entry) => entry === handle || entry === username || entry === id);
+  }
+
+  private displayName(user: Api.User): string {
+    if (user.username) return `@${user.username}`;
+    const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+    return name || String(user.id);
+  }
+
+  private async handleStart(event: NewMessageEvent): Promise<void> {
+    if (!event.isPrivate) return;
+
+    const token = event.message.patternMatch?.[1] ?? null;
+    const sender = (await event.message.getSender()) as Api.User | undefined;
+    if (!sender) return;
+
+    if (!this.isAllowedUser(sender)) {
+      logger.warn(`Unbefugter Dashboard-Login-Versuch von ${this.displayName(sender)} (ID ${sender.id}).`);
+      await event.message.respond({
+        message:
+          '⛔ **Zugriff verweigert:** Dein Telegram-Account ist nicht für das VOD-Dashboard freigeschaltet.',
+      });
+      if (token) {
+        const pending = state.pendingAuth.get(token);
+        if (pending) pending.status = 'denied';
+      }
+      return;
+    }
+
+    if (!token || !state.pendingAuth.has(token)) {
+      await event.message.respond({
+        message:
+          `👋 Hallo ${this.displayName(sender)}!\n\n` +
+          'Ich bin dein VOD-Uploader Bot. Öffne das Dashboard im Browser, um dich anzumelden.',
+      });
+      return;
+    }
+
+    const info = state.pendingAuth.get(token);
+    if (!info || info.status !== 'pending') {
+      await event.message.respond({
+        message: 'Dieser Login-Token wurde bereits verwendet oder ist abgelaufen.',
+      });
+      return;
+    }
+
+    info.user = this.displayName(sender);
+    await event.message.respond({
+      message:
+        '🔐 **Anmeldeversuch für das VOD-Dashboard**\n\n' +
+        `Konto: ${info.user}\n\nBestätige oder lehne die Anmeldung ab:`,
+      buttons: [
+        [
+          Button.inline('✅ Anmelden freigeben', Buffer.from(`auth_ok:${token}`)),
+          Button.inline('❌ Ablehnen', Buffer.from(`auth_no:${token}`)),
+        ],
+      ],
+    });
+    logger.info(`Login-Token für ${info.user} zur Bestätigung gesendet.`);
+  }
+
+  private async handleAuthCallback(event: CallbackQueryEvent): Promise<void> {
+    const data = event.data?.toString('utf8') ?? '';
+    const match = /^auth_(ok|no):(.+)$/.exec(data);
+    if (!match) return;
+    const kind = match[1] as 'ok' | 'no';
+    const token = match[2] ?? '';
+
+    const sender = (await event.getSender()) as Api.User | undefined;
+    if (!sender || !this.isAllowedUser(sender)) {
+      await event.answer({ message: 'Nicht berechtigt.', alert: true });
+      return;
+    }
+
+    const info = state.pendingAuth.get(token);
+    if (!info || info.status !== 'pending') {
+      await event.answer({ message: 'Token abgelaufen oder bereits verwendet.', alert: true });
+      return;
+    }
+
+    info.status = kind === 'ok' ? 'approved' : 'denied';
+    const label = kind === 'ok' ? '✅ Freigegeben' : '❌ Abgelehnt';
+    await event.answer({ message: label });
+
+    try {
+      await event.edit({
+        message: event.messageId,
+        text:
+          '🔐 **Anmeldeversuch für das VOD-Dashboard**\n\n' +
+          `Konto: ${info.user || 'unbekannt'}\n\nStatus: ${label}`,
+      });
+    } catch (error) {
+      logger.debug(`Login-Nachricht konnte nicht editiert werden: ${String(error)}`);
+    }
+
+    logger.info(`Login-Token ${kind === 'ok' ? 'freigegeben' : 'abgelehnt'} von ${info.user || sender.id}.`);
   }
 
   async createForumTopic(

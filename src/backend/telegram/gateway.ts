@@ -21,6 +21,8 @@ export interface TelegramGateway {
   readonly name: string;
   connect?(): Promise<void>;
   disconnect?(): Promise<void>;
+  /** Registriert /start- und Callback-Handler fuer die Dashboard-Anmeldung. */
+  startAuthFlow?(): void;
   isConnected(): boolean;
   getBotUsername(): string;
   createForumTopic(forumChatId: number | string, title: string, iconColor?: number): Promise<number>;
