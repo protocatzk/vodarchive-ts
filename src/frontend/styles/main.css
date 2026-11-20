@@ -4,6 +4,7 @@
 
 /* ================================================================== */
 /* Altes Archiv: Aktenschrank, Papier, Tinte, Karteikarten, Stempel.   */
+/* Tag- und Nachtmodus über CSS-Variablen.                             */
 /* ================================================================== */
 
 :root {
@@ -11,6 +12,8 @@
   --paper: #f6eedb;
   --parchment: #e8dcc0;
   --paper-deep: #e0d2b3;
+  --field: #fbf6e8;
+  --field-alt: #f8f2e1;
   --ink: #2a2318;
   --ink-soft: #5b4d37;
   --ink-faint: #8a7a5e;
@@ -18,7 +21,69 @@
   --oxblood: #8a2f2b;
   --brass: #b98d33;
   --sage: #5f6b43;
+  --brass-ink: #94701f;
+  --highlight: rgba(255, 255, 255, 0.85);
+  --highlight-soft: rgba(255, 255, 255, 0.5);
+  --hover: rgba(224, 210, 179, 0.4);
+  --oxblood-soft: rgba(138, 47, 43, 0.08);
+  --sage-soft: rgba(95, 107, 67, 0.08);
+  --log-info: #4e5a78;
+  --title: #f6eedb;
+  --title-sub: rgba(246, 238, 219, 0.82);
+  --cabinet-base: #2b2f2b;
+  --cabinet-seam: rgba(0, 0, 0, 0.55);
+  --cabinet-rail: rgba(0, 0, 0, 0.6);
+  --cabinet-bevel: rgba(255, 255, 255, 0.045);
+  --cabinet-glow: rgba(255, 240, 210, 0.1);
+  --cabinet-vignette: rgba(0, 0, 0, 0.65);
+  --handle: #c79a3e;
+  --handle-dark: #8a6524;
+  --handle-ring: #171a16;
+  --scroll-thumb: #7d6a48;
+  --scroll-track: #23261f;
+  --selection: rgba(185, 141, 51, 0.28);
+  --shadow-card: 0 30px 60px -38px rgba(0, 0, 0, 0.75), 0 8px 18px -10px rgba(0, 0, 0, 0.45);
+  --shadow-masthead: 0 30px 60px -34px rgba(0, 0, 0, 0.7), 0 6px 14px -6px rgba(0, 0, 0, 0.45);
   --radius: 12px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #211d17;
+  --parchment: #14120e;
+  --paper-deep: #2b261d;
+  --field: #262119;
+  --field-alt: #221d15;
+  --ink: #ece2c9;
+  --ink-soft: #c8b89a;
+  --ink-faint: #93826a;
+  --rule: #5a4c34;
+  --oxblood: #cf7466;
+  --brass: #d9ab58;
+  --sage: #9db06f;
+  --brass-ink: #d9ab58;
+  --highlight: rgba(255, 255, 255, 0.08);
+  --highlight-soft: rgba(255, 255, 255, 0.05);
+  --hover: rgba(217, 171, 88, 0.08);
+  --oxblood-soft: rgba(207, 116, 102, 0.12);
+  --sage-soft: rgba(157, 176, 111, 0.12);
+  --log-info: #9fb0d6;
+  --title: #f3e9d2;
+  --title-sub: rgba(243, 233, 210, 0.75);
+  --cabinet-base: #17150f;
+  --cabinet-seam: rgba(0, 0, 0, 0.78);
+  --cabinet-rail: rgba(0, 0, 0, 0.82);
+  --cabinet-bevel: rgba(255, 255, 255, 0.03);
+  --cabinet-glow: rgba(212, 163, 94, 0.1);
+  --cabinet-vignette: rgba(0, 0, 0, 0.82);
+  --handle: #d9ab58;
+  --handle-dark: #7a5a1f;
+  --handle-ring: #0d0c09;
+  --scroll-thumb: #5a4c34;
+  --scroll-track: #0f0d09;
+  --selection: rgba(217, 171, 88, 0.3);
+  --shadow-card: 0 30px 60px -34px rgba(0, 0, 0, 0.9), 0 8px 18px -8px rgba(0, 0, 0, 0.7);
+  --shadow-masthead: 0 30px 60px -30px rgba(0, 0, 0, 0.9), 0 6px 14px -4px rgba(0, 0, 0, 0.7);
 }
 
 * {
@@ -41,19 +106,19 @@ body {
   font-size: 17px;
   line-height: 1.5;
   color: var(--ink);
-  background-color: #2b2f2b;
+  background-color: var(--cabinet-base);
   background-image:
     /* Messinggriffe */
-    radial-gradient(circle at 50% 50%, #c79a3e 0 5px, #8a6524 6px 7px, #171a16 8px 11px, transparent 12px),
+    radial-gradient(circle at 50% 50%, var(--handle) 0 5px, var(--handle-dark) 6px 7px, var(--handle-ring) 8px 11px, transparent 12px),
     /* Horizontale Schubladenfugen */
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.55) 0 2px, transparent 2px 132px),
+    repeating-linear-gradient(0deg, var(--cabinet-seam) 0 2px, transparent 2px 132px),
     /* Vertikale Schrankfugen */
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0 3px, transparent 3px 340px),
+    repeating-linear-gradient(90deg, var(--cabinet-rail) 0 3px, transparent 3px 340px),
     /* Schubladen-Bevel */
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 6px, transparent 6px 132px),
+    repeating-linear-gradient(0deg, var(--cabinet-bevel) 0 6px, transparent 6px 132px),
     /* Licht & Vignette */
-    radial-gradient(ellipse at 50% -10%, rgba(255, 240, 210, 0.10), transparent 55%),
-    radial-gradient(ellipse at 50% 125%, rgba(0, 0, 0, 0.65), transparent 60%);
+    radial-gradient(ellipse at 50% -10%, var(--cabinet-glow), transparent 55%),
+    radial-gradient(ellipse at 50% 125%, var(--cabinet-vignette), transparent 60%);
   background-size:
     340px 132px,
     auto,
@@ -71,9 +136,10 @@ body {
   background-repeat: repeat;
   background-attachment: fixed;
   min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Feine Metallkörnung */
+/* Feine Körnung */
 body::before {
   content: '';
   position: fixed;
@@ -90,7 +156,7 @@ body::before {
 }
 
 ::selection {
-  background: rgba(185, 141, 51, 0.28);
+  background: var(--selection);
 }
 
 /* ================================================================== */
@@ -123,9 +189,9 @@ body::before {
   padding: 1.5rem 1.6rem 0.9rem;
   margin-bottom: 2rem;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 30px 60px -34px rgba(0, 0, 0, 0.7),
-    0 6px 14px -6px rgba(0, 0, 0, 0.45);
+    0 1px 0 var(--highlight) inset,
+    var(--shadow-masthead);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 .masthead-row {
@@ -153,9 +219,9 @@ body::before {
   border-radius: 10px;
   color: var(--ink);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent),
+    linear-gradient(180deg, var(--highlight-soft), transparent),
     var(--paper-deep);
-  box-shadow: 3px 3px 0 rgba(42, 35, 24, 0.22);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.22);
 }
 
 .crest-mark svg {
@@ -200,7 +266,7 @@ body::before {
   justify-content: flex-end;
   border: 1px solid var(--rule);
   border-radius: 8px;
-  background: #fbf6e8;
+  background: var(--field);
   padding: 0.55rem 0.85rem;
   font-family: 'Special Elite', monospace;
   font-size: 0.68rem;
@@ -271,9 +337,15 @@ body::before {
 }
 
 .tab-out:hover {
-  background: rgba(138, 47, 43, 0.08);
+  background: var(--oxblood-soft);
   border-color: var(--oxblood);
   color: var(--oxblood);
+}
+
+.tab-theme {
+  border-color: var(--brass);
+  color: var(--brass-ink);
+  background: transparent;
 }
 
 /* ================================================================== */
@@ -286,10 +358,10 @@ body::before {
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 30px 60px -38px rgba(0, 0, 0, 0.75),
-    0 8px 18px -10px rgba(0, 0, 0, 0.45);
+    0 1px 0 var(--highlight) inset,
+    var(--shadow-card);
   padding: 1.7rem 1.6rem 1.55rem;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
 @media (min-width: 768px) {
@@ -313,7 +385,7 @@ body::before {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.6) inset;
+  box-shadow: 0 -1px 0 var(--highlight-soft) inset;
 }
 
 .sheet-head {
@@ -351,13 +423,13 @@ body::before {
   letter-spacing: -0.02em;
   line-height: 1.05;
   margin: 0 0 0.4rem;
-  color: var(--paper);
+  color: var(--title);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .page-subtitle {
   font-style: italic;
-  color: rgba(246, 238, 219, 0.82);
+  color: var(--title-sub);
   margin-bottom: 1.8rem;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
@@ -417,7 +489,7 @@ body::before {
   border-radius: 10px;
   padding: 1.15rem 1.2rem 1.05rem;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 1px 0 var(--highlight) inset,
     0 18px 34px -26px rgba(0, 0, 0, 0.7),
     0 4px 10px -6px rgba(0, 0, 0, 0.35);
 }
@@ -448,12 +520,12 @@ body::before {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   transform: rotate(-2deg);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  box-shadow: 0 1px 0 var(--highlight-soft) inset;
 }
 
 .stamp-red { color: var(--oxblood); }
 .stamp-green { color: var(--sage); }
-.stamp-brass { color: #94701f; }
+.stamp-brass { color: var(--brass-ink); }
 .stamp-muted { color: var(--ink-faint); }
 
 /* ================================================================== */
@@ -485,14 +557,14 @@ body::before {
   border-color: var(--oxblood);
   color: var(--paper);
 }
-.btn-primary:hover { background: #762622; }
+.btn-primary:hover { filter: brightness(0.92); }
 
 .btn-danger {
   border-color: var(--oxblood);
   color: var(--oxblood);
   background: transparent;
 }
-.btn-danger:hover { background: rgba(138, 47, 43, 0.08); }
+.btn-danger:hover { background: var(--oxblood-soft); }
 
 .btn-ghost {
   border-color: transparent;
@@ -505,20 +577,20 @@ body::before {
   width: 100%;
   border: 1px solid var(--rule);
   border-radius: 8px;
-  background: #fbf6e8;
+  background: var(--field);
   padding: 0.6rem 0.8rem;
   font-family: 'EB Garamond', serif;
   font-size: 1rem;
   color: var(--ink);
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.25s ease;
 }
 
 .input:focus,
 .select:focus,
 .textarea:focus {
   border-color: var(--brass);
-  box-shadow: 0 0 0 3px rgba(185, 141, 51, 0.16);
+  box-shadow: 0 0 0 3px var(--selection);
 }
 
 .input::placeholder {
@@ -590,7 +662,7 @@ body::before {
 }
 
 .table tbody tr:hover td {
-  background: rgba(224, 210, 179, 0.4);
+  background: var(--hover);
 }
 
 .table-link,
@@ -624,7 +696,7 @@ body::before {
   position: relative;
   border: 1px solid var(--rule);
   border-radius: 10px;
-  background: #fbf6e8;
+  background: var(--field);
   padding: 1.4rem 1.35rem 1.2rem 2.2rem;
 }
 
@@ -634,7 +706,8 @@ body::before {
   top: 0.9rem;
   bottom: 0.9rem;
   left: 1rem;
-  border-left: 1px solid rgba(138, 47, 43, 0.45);
+  border-left: 1px solid var(--oxblood);
+  opacity: 0.45;
 }
 
 .job-box::after {
@@ -643,7 +716,8 @@ body::before {
   top: 0.9rem;
   bottom: 0.9rem;
   left: calc(1rem - 4px);
-  border-left: 5px dotted rgba(138, 47, 43, 0.18);
+  border-left: 5px dotted var(--oxblood);
+  opacity: 0.18;
 }
 
 .job-stage {
@@ -666,7 +740,7 @@ body::before {
   position: absolute;
   inset: 2px auto 2px 2px;
   border-radius: 999px;
-  background: repeating-linear-gradient(135deg, var(--brass) 0 6px, #a97c25 6px 12px);
+  background: repeating-linear-gradient(135deg, var(--brass) 0 6px, var(--handle-dark) 6px 12px);
 }
 
 .job-pct {
@@ -682,7 +756,7 @@ body::before {
   gap: 1rem;
   border: 1px solid var(--rule);
   border-radius: 8px;
-  background: #fbf6e8;
+  background: var(--field);
   padding: 0.7rem 0.9rem;
 }
 
@@ -726,9 +800,9 @@ body::before {
     repeating-linear-gradient(
       to bottom,
       transparent 0 1.6rem,
-      rgba(91, 77, 55, 0.10) 1.6rem calc(1.6rem + 1px)
+      var(--hover) 1.6rem calc(1.6rem + 1px)
     ),
-    #f8f2e1;
+    var(--field-alt);
   padding: 0.85rem 1rem;
   font-family: 'Special Elite', 'Courier Prime', monospace;
   font-size: 0.76rem;
@@ -741,8 +815,8 @@ body::before {
   word-break: break-word;
 }
 
-.log-info { color: #4e5a78; }
-.log-warning { color: #94701f; }
+.log-info { color: var(--log-info); }
+.log-warning { color: var(--brass-ink); }
 .log-error { color: var(--oxblood); }
 
 /* ================================================================== */
@@ -750,7 +824,7 @@ body::before {
 /* ================================================================== */
 
 .n8n-stamp {
-  border: 2px solid #94701f;
+  border: 2px solid var(--brass-ink);
   border-radius: 6px;
   background: transparent;
   padding: 0.25rem 0.7rem;
@@ -758,7 +832,7 @@ body::before {
   font-size: 0.64rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #94701f;
+  color: var(--brass-ink);
   transform: rotate(-1.5deg);
 }
 
@@ -779,7 +853,7 @@ body::before {
 .badge-live {
   border-color: var(--sage);
   color: var(--sage);
-  background: rgba(95, 107, 67, 0.08);
+  background: var(--sage-soft);
 }
 
 .badge-idle {
@@ -790,7 +864,7 @@ body::before {
 
 .badge-golden {
   border-color: var(--brass);
-  color: #94701f;
+  color: var(--brass-ink);
 }
 
 .toast-area {
@@ -805,7 +879,25 @@ body::before {
   pointer-events: none;
 }
 
+/* Schaltfläche direkt auf dem Schrank (heller Text, beide Modi) */
+.cabinet-ghost {
+  border: 1px solid rgba(246, 238, 219, 0.45);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #f6eedb;
+  padding: 0.5rem 0.95rem;
+  font-family: 'Special Elite', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background 0.15s ease;
+}
+
+.cabinet-ghost:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
 /* Scrollbar im Archiv-Stil */
 ::-webkit-scrollbar { width: 11px; height: 11px; }
-::-webkit-scrollbar-thumb { background: #7d6a48; border-radius: 6px; }
-::-webkit-scrollbar-track { background: #23261f; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 6px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }

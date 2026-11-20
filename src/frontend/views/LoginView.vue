@@ -2,9 +2,11 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useTheme } from '../composables/useTheme';
 import { errorMessage } from '../lib/api';
 
 const auth = useAuthStore();
+const { theme, toggleTheme } = useTheme();
 const router = useRouter();
 
 const token = ref('');
@@ -79,6 +81,13 @@ onBeforeUnmount(stopPolling);
 
 <template>
   <div class="fixed inset-0 z-10 flex items-center justify-center px-4 py-10">
+    <button
+      type="button"
+      class="cabinet-ghost absolute right-5 top-5"
+      @click="toggleTheme"
+    >
+      {{ theme === 'dark' ? '☀ Tag' : '☾ Nacht' }}
+    </button>
     <div class="w-full max-w-md">
       <div class="sheet" style="padding: 2rem 1.8rem">
         <div class="text-center">
@@ -119,7 +128,7 @@ onBeforeUnmount(stopPolling);
           :style="{
             borderColor: failed ? 'var(--oxblood)' : 'var(--rule)',
             color: failed ? 'var(--oxblood)' : 'var(--ink-soft)',
-            background: '#fbf6e8',
+            background: 'var(--field)',
           }"
         >
           <span class="typewriter text-[0.6rem] uppercase tracking-widest mr-2" style="color: var(--ink-faint)">

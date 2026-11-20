@@ -3,11 +3,13 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useDashboardStore } from '../stores/dashboard';
+import { useTheme } from '../composables/useTheme';
 
 defineProps<{ user: string; connected: boolean }>();
 
 const auth = useAuthStore();
 const dashboard = useDashboardStore();
+const { theme, toggleTheme } = useTheme();
 const router = useRouter();
 
 const stand = computed(() =>
@@ -60,6 +62,14 @@ async function logout(): Promise<void> {
       <RouterLink to="/sources" class="tab">Zugänge</RouterLink>
       <RouterLink to="/workflows" class="tab">Vorgänge</RouterLink>
       <RouterLink to="/settings" class="tab">Ordnung</RouterLink>
+      <button
+        type="button"
+        class="tab tab-theme"
+        :title="theme === 'dark' ? 'Zum Tagmodus wechseln' : 'Zum Nachtmodus wechseln'"
+        @click="toggleTheme"
+      >
+        {{ theme === 'dark' ? '☀ Tag' : '☾ Nacht' }}
+      </button>
       <button type="button" class="tab tab-out" @click="logout">Abmelden</button>
     </nav>
   </header>
