@@ -491,12 +491,21 @@ export class RssArchiver {
           cookie: source.cookie ?? '',
           api_base_url: source.apiBaseUrl ?? '',
           target_id: recording.targetId,
-          topic_name: recording.streamer,
+          topic_name: source.testMode ? `TEST · ${recording.streamer}` : recording.streamer,
+          ...(source.testMode
+            ? {
+                skip_setdownloaded: true,
+                ...(source.testChatId ? { chat_id: source.testChatId } : {}),
+                ...(source.testForumChatId
+                  ? { forum_chat_id: source.testForumChatId }
+                  : {}),
+              }
+            : {}),
         },
       }));
       return [
         {
-          feedKey: source.url || source.apiBaseUrl || source.name,
+          feedKey: `streamrecorder:${source.id}`,
           feedTitle: source.name,
           items,
         },
@@ -771,6 +780,26 @@ export class RssArchiver {
 
       for (const source of selected) {
         try {
+          if (source.type === 'streamrecorder' && source.dryRun) {
+            const result = await fetchStreamrecorder(source);
+            const at = nowSeconds();
+            this.recordFeed(
+              { title: source.name, url: source.url },
+              source,
+              { ok: true, error: null, items: result.items.length, at },
+            );
+            sourceStore.markChecked(source.id, { ok: true, items: result.items.length });
+            logger.info(
+              `Testlauf '${source.name}': ${result.items.length} Kandidat(en), kein Upload.`,
+            );
+            for (const item of result.items.slice(0, 20)) {
+              logger.info(
+                `  ${item.streamer} · ${item.title} · ${item.recordingId} · ${item.platform}`,
+              );
+            }
+            continue;
+          }
+
           const entries = await this.collectItems(source);
           const backfill = source.initialBackfill ?? settings.initialBackfill;
           let sourceItems = 0;

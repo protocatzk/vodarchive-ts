@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { rssArchiver } from '../../rss/archiver';
 import { sourceStore } from '../../sources/store';
-import { previewStreamrecorder } from '../../sources/streamrecorder';
+import { fetchStreamrecorder, previewStreamrecorder } from '../../sources/streamrecorder';
 import { requireAuth } from '../middleware/auth';
 
 export const sourcesRouter = Router();
@@ -91,4 +91,37 @@ sourcesRouter.post('/:id/check', (req, res) => {
   }
   const started = rssArchiver.triggerSource(id);
   res.status(started ? 202 : 409).json({ status: started ? 'started' : 'busy' });
+});
+
+sourcesRouter.post('/:id/preview', async (req, res) => {
+  const source = sourceStore.getInternal(req.params['id'] ?? '');
+  if (!source) {
+    res.status(404).json({ error: 'Quelle nicht gefunden.' });
+    return;
+  }
+  if (source.type !== 'streamrecorder') {
+    res.status(400).json({ error: 'Vorschau nur für Streamrecorder-Quellen.' });
+    return;
+  }
+  try {
+    const result = await fetchStreamrecorder(source);
+    res.json({
+      ok: true,
+      total: result.total,
+      targets: result.targets.length,
+      items: result.items.slice(0, 50).map((item) => ({
+        id: item.id,
+        recordingId: item.recordingId,
+        title: item.title,
+        streamer: item.streamer,
+        platform: item.platform,
+        published: item.published,
+        filesizeMb: item.filesizeMb,
+        thumbnail: item.thumbnail,
+        url: item.url,
+      })),
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: (error as Error).message });
+  }
 });

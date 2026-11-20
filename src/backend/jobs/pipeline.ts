@@ -21,6 +21,10 @@ async function markStreamrecorderDownloaded(payload: Record<string, unknown>): P
   const source = str(payload, ['source']);
   const recordingId = str(payload, ['recording_id']);
   if (source === 'rss' || !recordingId) return;
+  if (payload['skip_setdownloaded'] === true) {
+    logger.info(`[${recordingId}] Testmodus: setdownloaded wird übersprungen.`);
+    return;
+  }
   const cookie = str(payload, ['cookie']) || config.streamrecorder.cookie;
   if (!cookie) return;
 

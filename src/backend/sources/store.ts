@@ -39,6 +39,14 @@ export interface Source {
   initialBackfill?: boolean;
   /** Streamrecorder: nur nicht heruntergeladene Aufnahmen übernehmen. */
   onlyNew?: boolean;
+  /** Streamrecorder: nur loggen, nichts einreihen/hochladen. */
+  dryRun?: boolean;
+  /** Streamrecorder: Test-Upload ohne setdownloaded-Markierung. */
+  testMode?: boolean;
+  /** Streamrecorder: Ziel-Chat für Test-Uploads (optional). */
+  testChatId?: string;
+  /** Streamrecorder: Ziel-Forum für Test-Uploads (optional). */
+  testForumChatId?: string;
 }
 
 export interface SourceInput {
@@ -56,6 +64,10 @@ export interface SourceInput {
   fieldMap?: unknown;
   initialBackfill?: unknown;
   onlyNew?: unknown;
+  dryRun?: unknown;
+  testMode?: unknown;
+  testChatId?: unknown;
+  testForumChatId?: unknown;
 }
 
 function nowSeconds(): number {
@@ -239,6 +251,10 @@ export class SourceStore {
       source.fieldMap = toFieldMap(input.fieldMap);
       source.initialBackfill = toBool(input.initialBackfill, false);
       source.onlyNew = toBool(input.onlyNew, true);
+      source.dryRun = toBool(input.dryRun, false);
+      source.testMode = toBool(input.testMode, false);
+      source.testChatId = String(input.testChatId ?? '').trim();
+      source.testForumChatId = String(input.testForumChatId ?? '').trim();
     }
 
     this.data.push(source);
@@ -282,6 +298,12 @@ export class SourceStore {
         source.initialBackfill = toBool(input.initialBackfill, false);
       }
       if (input.onlyNew !== undefined) source.onlyNew = toBool(input.onlyNew, true);
+      if (input.dryRun !== undefined) source.dryRun = toBool(input.dryRun, false);
+      if (input.testMode !== undefined) source.testMode = toBool(input.testMode, false);
+      if (input.testChatId !== undefined) source.testChatId = String(input.testChatId).trim();
+      if (input.testForumChatId !== undefined) {
+        source.testForumChatId = String(input.testForumChatId).trim();
+      }
     }
 
     this.persist();

@@ -170,6 +170,10 @@ export interface Source {
   fieldMap?: Record<string, string>;
   initialBackfill?: boolean;
   onlyNew?: boolean;
+  dryRun?: boolean;
+  testMode?: boolean;
+  testChatId?: string;
+  testForumChatId?: string;
 }
 
 export type WorkflowStatus = 'ok' | 'failed' | 'timeout' | 'cooldown';

@@ -42,6 +42,10 @@ export const useSourcesStore = defineStore('sources', () => {
     targets?: string[];
     initialBackfill?: boolean;
     onlyNew?: boolean;
+    dryRun?: boolean;
+    testMode?: boolean;
+    testChatId?: string;
+    testForumChatId?: string;
   }): Promise<void> {
     await api.post(endpoints.sources(), input);
     await load();
@@ -66,6 +70,31 @@ export const useSourcesStore = defineStore('sources', () => {
     }
   }
 
+  async function preview(id: string): Promise<{
+    ok: boolean;
+    total?: number;
+    targets?: number;
+    items?: Array<{
+      id: string;
+      recordingId: string;
+      title: string;
+      streamer: string;
+      platform: string;
+      published: number | null;
+      filesizeMb: number;
+      thumbnail: string | null;
+      url: string;
+    }>;
+    error?: string;
+  }> {
+    try {
+      const { data } = await api.post(endpoints.sourcePreview(id));
+      return data;
+    } catch (err) {
+      return { ok: false, error: errorMessage(err, 'Vorschau fehlgeschlagen') };
+    }
+  }
+
   async function test(
     type: SourceType,
     url: string,
@@ -81,5 +110,5 @@ export const useSourcesStore = defineStore('sources', () => {
     }
   }
 
-  return { sources, loading, error, load, add, update, remove, check, test };
+  return { sources, loading, error, load, add, update, remove, check, preview, test };
 });

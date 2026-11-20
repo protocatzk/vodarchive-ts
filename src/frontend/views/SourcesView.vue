@@ -29,10 +29,31 @@ const newCookie = ref('');
 const newTargets = ref('');
 const newOnlyNew = ref(true);
 const newInitialBackfill = ref(false);
+const newDryRun = ref(false);
+const newTestMode = ref(false);
+const newTestChatId = ref('');
+const newTestForumChatId = ref('');
 const newListPath = ref('/api/user/recordingsv2');
 const newLimit = ref<number | ''>(10);
 const newItemsPath = ref('');
 const advancedOpen = ref(false);
+
+interface PreviewItem {
+  id: string;
+  recordingId: string;
+  title: string;
+  streamer: string;
+  platform: string;
+  published: number | null;
+  filesizeMb: number;
+  thumbnail: string | null;
+  url: string;
+}
+const previewOpen = ref(false);
+const previewLoading = ref(false);
+const previewName = ref('');
+const previewInfo = ref('');
+const previewItems = ref<PreviewItem[]>([]);
 
 const isStreamrecorder = computed(() => newType.value === 'streamrecorder');
 
@@ -72,6 +93,10 @@ function streamrecorderExtra(): Record<string, unknown> {
       .filter(Boolean),
     initialBackfill: newInitialBackfill.value,
     onlyNew: newOnlyNew.value,
+    dryRun: newDryRun.value,
+    testMode: newTestMode.value,
+    testChatId: newTestChatId.value.trim(),
+    testForumChatId: newTestForumChatId.value.trim(),
   };
 }
 
@@ -130,6 +155,10 @@ async function add(): Promise<void> {
     newTargets.value = '';
     newOnlyNew.value = true;
     newInitialBackfill.value = false;
+    newDryRun.value = false;
+    newTestMode.value = false;
+    newTestChatId.value = '';
+    newTestForumChatId.value = '';
     newListPath.value = '/api/user/recordingsv2';
     newLimit.value = 10;
     newItemsPath.value = '';
@@ -139,6 +168,22 @@ async function add(): Promise<void> {
     show(errorMessage(error), 'error');
   } finally {
     adding.value = false;
+  }
+}
+
+async function preview(id: string, name: string): Promise<void> {
+  previewOpen.value = true;
+  previewLoading.value = true;
+  previewName.value = name;
+  previewInfo.value = '';
+  previewItems.value = [];
+  const result = await store.preview(id);
+  previewLoading.value = false;
+  if (result.ok) {
+    previewItems.value = result.items ?? [];
+    previewInfo.value = `${result.total ?? 0} Aufnahmen · ${result.targets ?? 0} Targets`;
+  } else {
+    previewInfo.value = result.error ?? 'Vorschau fehlgeschlagen';
   }
 }
 
@@ -229,6 +274,24 @@ async function remove(id: string): Promise<void> {
             <input v-model="newInitialBackfill" type="checkbox" />
             Bestand beim ersten Lauf übernehmen
           </label>
+          <label class="form-check">
+            <input v-model="newDryRun" type="checkbox" />
+            Trockenlauf (nur loggen)
+          </label>
+          <label class="form-check">
+            <input v-model="newTestMode" type="checkbox" />
+            Test-Upload (ohne downloaded-Markierung)
+          </label>
+          <template v-if="newTestMode">
+            <label class="md:col-span-2 lg:col-span-2">
+              <span class="form-label">Test-Chat-ID (optional)</span>
+              <input v-model="newTestChatId" class="input" placeholder="Standard-Chat" />
+            </label>
+            <label class="md:col-span-2 lg:col-span-2">
+              <span class="form-label">Test-Forum-ID (optional)</span>
+              <input v-model="newTestForumChatId" class="input" placeholder="Standard-Forum" />
+            </label>
+          </template>
           <button
             type="button"
             class="btn btn-ghost lg:col-span-1"
@@ -301,6 +364,8 @@ async function remove(id: string): Promise<void> {
                 <div class="flex flex-wrap gap-1">
                   <span v-if="!source.enabled" class="meta" style="color: var(--oxblood)">gesperrt</span>
                   <span v-if="source.cookieSet" class="chip">Cookie gesetzt</span>
+                  <span v-if="source.dryRun" class="chip">Trockenlauf</span>
+                  <span v-if="source.testMode" class="chip">Test-Upload</span>
                 </div>
               </td>
               <td class="typewriter text-[0.62rem] uppercase" style="color: var(--brass)">
@@ -322,6 +387,14 @@ async function remove(id: string): Promise<void> {
               <td class="font-display">{{ source.archivedCount }}</td>
               <td>
                 <div class="flex flex-wrap gap-2">
+                  <button
+                    v-if="source.type === 'streamrecorder'"
+                    type="button"
+                    class="btn"
+                    @click="preview(source.id, source.name)"
+                  >
+                    Vorschau
+                  </button>
                   <button type="button" class="btn" @click="check(source.id)">Prüfen</button>
                   <button type="button" class="btn" @click="toggle(source.id, source.enabled)">
                     {{ source.enabled ? 'Sperren' : 'Öffnen' }}
@@ -334,5 +407,45 @@ async function remove(id: string): Promise<void> {
         </table>
       </div>
     </section>
+
+    <div
+      v-if="previewOpen"
+      class="fixed inset-0 z-40 flex items-center justify-center p-4"
+      style="background: rgba(42, 35, 24, 0.55)"
+      @click.self="previewOpen = false"
+    >
+      <div class="sheet w-full max-w-4xl" style="max-height: 85vh; overflow-y: auto">
+        <div class="sheet-head">
+          <div class="sheet-title">Vorschau · {{ previewName }}</div>
+          <button type="button" class="btn btn-ghost" @click="previewOpen = false">✕</button>
+        </div>
+        <div class="meta mb-3">{{ previewInfo }}</div>
+        <div v-if="previewLoading" class="meta">Lade …</div>
+        <div v-else class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="min-w-[9rem]">Streamer</th>
+                <th class="min-w-[16rem]">Titel</th>
+                <th>ID</th>
+                <th>Plattform</th>
+                <th>MB</th>
+                <th>Datum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in previewItems" :key="item.id">
+                <td class="font-display font-semibold">{{ item.streamer }}</td>
+                <td class="truncate max-w-[22rem]" :title="item.title">{{ item.title }}</td>
+                <td class="typewriter text-[0.6rem]">{{ item.recordingId }}</td>
+                <td class="typewriter text-[0.62rem] uppercase">{{ item.platform }}</td>
+                <td class="typewriter text-xs">{{ item.filesizeMb }}</td>
+                <td class="typewriter text-[0.62rem]">{{ formatTs(item.published) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

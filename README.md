@@ -303,6 +303,19 @@ Beispiel:
 }
 ```
 
+### Sicher testen (ohne „downloaded"/Watched-Markierung)
+
+- **Trockenlauf** (Quelle): liest die Live-API, loggt Kandidaten, reiht nichts
+  ein und ruft kein `setdownloaded` auf.
+- **Vorschau** (Button an der Quelle): liest Targets/Aufnahmen live, ohne
+  irgendetwas zu verändern.
+- **Test-Upload**: echter Upload in einen optionalen Test-Chat
+  (`testChatId`/`testForumChatId`), aber mit `skip_setdownloaded` – die
+  Streamrecorder-Markierung bleibt unangetastet.
+
+So lässt sich der neue Archivar parallel zum alten betreiben, ohne dessen
+Watched-/Downloaded-Status zu beeinflussen.
+
 ## Bekannte Einschränkungen
 
 - **Live-Streams:** RSS-Live-Erkennung/Re-Check ist noch nicht umgesetzt.
