@@ -45,6 +45,9 @@
   --shadow-card: 0 30px 60px -38px rgba(0, 0, 0, 0.75), 0 8px 18px -10px rgba(0, 0, 0, 0.45);
   --shadow-masthead: 0 30px 60px -34px rgba(0, 0, 0, 0.7), 0 6px 14px -6px rgba(0, 0, 0, 0.45);
   --radius: 12px;
+  --font-display: 'Fraunces', Georgia, ui-serif, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 [data-theme='dark'] {
@@ -102,9 +105,10 @@ body,
 /* ================================================================== */
 
 body {
-  font-family: 'EB Garamond', Georgia, ui-serif, serif;
-  font-size: 17px;
-  line-height: 1.5;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
   color: var(--ink);
   background-color: var(--cabinet-base);
   background-image:
@@ -230,19 +234,19 @@ body::before {
 }
 
 .eyebrow {
-  font-family: 'Special Elite', 'Courier Prime', monospace;
+  font-family: var(--font-mono);
   font-size: 0.66rem;
-  letter-spacing: 0.26em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .wordmark {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(2.1rem, 4.4vw, 3.1rem);
   line-height: 0.95;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   color: var(--ink);
 }
 
@@ -252,7 +256,7 @@ body::before {
 
 .tagline {
   margin-top: 0.35rem;
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-display);
   font-style: italic;
   font-size: 1.05rem;
   color: var(--ink-soft);
@@ -268,7 +272,7 @@ body::before {
   border-radius: 8px;
   background: var(--field);
   padding: 0.55rem 0.85rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -309,9 +313,9 @@ body::before {
   border-radius: 8px;
   background: var(--paper-deep);
   padding: 0.5rem 1rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -380,9 +384,9 @@ body::before {
   border-radius: 9px 9px 0 0;
   background: var(--paper);
   padding: 0.4rem 0.9rem 0.3rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.64rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--ink-soft);
   box-shadow: 0 -1px 0 var(--highlight-soft) inset;
@@ -400,34 +404,35 @@ body::before {
 }
 
 .sheet-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 1.3rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--ink);
 }
 
 .sheet-meta {
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.64rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 /* Seitenüberschrift */
 .page-title {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: clamp(2rem, 4.4vw, 2.9rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
   margin: 0 0 0.4rem;
   color: var(--title);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
 }
 
 .page-subtitle {
+  font-family: var(--font-display);
   font-style: italic;
   color: var(--title-sub);
   margin-bottom: 1.8rem;
@@ -451,31 +456,31 @@ body::before {
 /* ================================================================== */
 
 .meta {
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .stat-label {
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.62rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .stat-value {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: 2.15rem;
   font-weight: 700;
   line-height: 1.05;
   color: var(--ink);
 }
 
-.serif { font-family: 'EB Garamond', serif; }
-.typewriter { font-family: 'Special Elite', monospace; }
+.serif { font-family: var(--font-display); }
+.typewriter { font-family: var(--font-mono); }
 
 /* ================================================================== */
 /* Karteikarten (Stats)                                               */
@@ -515,9 +520,9 @@ body::before {
   border: 2px solid currentColor;
   border-radius: 3px;
   padding: 0.18rem 0.55rem 0.1rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.64rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   transform: rotate(-2deg);
   box-shadow: 0 1px 0 var(--highlight-soft) inset;
@@ -541,9 +546,9 @@ body::before {
   border-radius: 8px;
   background: transparent;
   padding: 0.55rem 1.1rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--ink);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -579,7 +584,7 @@ body::before {
   border-radius: 8px;
   background: var(--field);
   padding: 0.6rem 0.8rem;
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-body);
   font-size: 1rem;
   color: var(--ink);
   outline: none;
@@ -606,9 +611,9 @@ body::before {
 .form-label {
   display: block;
   margin-bottom: 0.35rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.62rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
@@ -644,10 +649,10 @@ body::before {
 .table th {
   padding: 0.65rem 1rem 0.5rem 0;
   text-align: left;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
   font-weight: 400;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   color: var(--ink-faint);
   border-bottom: 1px solid var(--ink-soft);
@@ -680,7 +685,7 @@ body::before {
   border-radius: 5px;
   background: var(--paper-deep);
   padding: 0.12rem 0.5rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   color: var(--ink-soft);
@@ -721,7 +726,7 @@ body::before {
 }
 
 .job-stage {
-  font-family: 'EB Garamond', serif;
+  font-family: var(--font-display);
   font-style: italic;
   font-size: 1.02rem;
   color: var(--ink-soft);
@@ -744,7 +749,7 @@ body::before {
 }
 
 .job-pct {
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 1.2rem;
   color: var(--oxblood);
 }
@@ -804,7 +809,7 @@ body::before {
     ),
     var(--field-alt);
   padding: 0.85rem 1rem;
-  font-family: 'Special Elite', 'Courier Prime', monospace;
+  font-family: var(--font-mono);
   font-size: 0.76rem;
   line-height: 1.6rem;
   color: var(--ink-soft);
@@ -828,9 +833,9 @@ body::before {
   border-radius: 6px;
   background: transparent;
   padding: 0.25rem 0.7rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.64rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--brass-ink);
   transform: rotate(-1.5deg);
@@ -843,9 +848,9 @@ body::before {
   border-radius: 5px;
   background: var(--paper-deep);
   padding: 0.12rem 0.5rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
@@ -886,9 +891,9 @@ body::before {
   background: rgba(0, 0, 0, 0.18);
   color: #f6eedb;
   padding: 0.5rem 0.95rem;
-  font-family: 'Special Elite', monospace;
+  font-family: var(--font-mono);
   font-size: 0.66rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   transition: background 0.15s ease;
 }

@@ -35,7 +35,7 @@ const { messages, dismiss } = useToast();
           >
             {{ message.type === 'error' ? 'Fehler' : message.type === 'success' ? 'Notiert' : 'Hinweis' }}
           </span>
-          <span class="flex-1 font-serif">{{ message.message }}</span>
+          <span class="flex-1 font-sans text-[0.95rem]">{{ message.message }}</span>
         </div>
       </div>
     </TransitionGroup>

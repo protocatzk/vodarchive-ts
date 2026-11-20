@@ -34,9 +34,9 @@ module.exports = {
         cyan: '#7c5a1e',
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'ui-serif', 'serif'],
-        serif: ['"EB Garamond"', 'Georgia', 'ui-serif', 'serif'],
-        mono: ['"Special Elite"', '"Courier Prime"', 'ui-monospace', 'monospace'],
+        display: ['Fraunces', 'Georgia', 'ui-serif', 'serif'],
+        serif: ['Fraunces', 'Georgia', 'ui-serif', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       borderRadius: {

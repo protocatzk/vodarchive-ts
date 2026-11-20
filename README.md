@@ -43,7 +43,7 @@ Die Oberfläche ist als „Archivraum" aufgebaut:
 
 - **Aktenschrank**: Metallschrank mit Schubladenfugen, Messinggriffen und Vignette als Seitenhintergrund
 - **Papier & Tinte**: Papierbögen mit Faser-/Alterungstextur, Tinte `#2a2318`, Oxblood `#8a2f2b`, Messing `#b98d33`
-- **Typografie**: Playfair Display (Titel), EB Garamond (Fließtext), Special Elite (Schreibmaschinen-Metadaten, Stempel)
+- **Typografie**: Fraunces (moderne Serif für Titel), Inter (UI/Fließtext), IBM Plex Mono (Labels/Stempel/Metadaten)
 - **Struktur**: Masthead als Papierbogen mit Wappen, „Stand"-Vermerk und Reiternavigation; jede Sektion als abgerundetes Aktenblatt mit Reiter
 - **Bestandteile**: Karteikarten für Kennzahlen, Vorgangsbogen mit roter Aktenrandlinie, Bestandsbuch als Register, Stempel (Archiviert/In Arbeit/Fehler), Zugangsbuch für RSS, Schreibmaschinen-Protokoll
 - **Login**: Lesesaal-Ausweis (Zutrittskarte)
