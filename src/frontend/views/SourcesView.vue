@@ -116,15 +116,10 @@ async function remove(id: string): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 py-6">
+  <div class="page">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
-
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold">Quellen</h1>
-      <p class="mt-1 text-sm text-muted">
-        RSS-Feeds und OPML-Listen. Neue Quellen werden beim nächsten Poll automatisch verarbeitet.
-      </p>
-    </div>
+    <h1 class="page-title mb-0">Quellen</h1>
+    <p class="page-subtitle text-xs">RSS-Feeds, OPML-Listen und yt-dlp-Kanäle – neue Quellen auf Runtime-Basis.</p>
 
     <div class="card mb-6">
       <div class="mb-3 card-title">Quelle hinzufügen</div>

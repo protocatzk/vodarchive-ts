@@ -44,8 +44,8 @@ function formatTs(ts: number | null | undefined): string {
 </script>
 
 <template>
-  <div class="card">
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <div class="card card-body">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="card-title">RSS-Archiv (rss.app)</div>
       <div class="flex flex-wrap items-center gap-2">
         <span class="badge" :class="badge.cls" :title="badge.title">{{ badge.text }}</span>
@@ -57,20 +57,20 @@ function formatTs(ts: number | null | undefined): string {
       </div>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      <div>
+    <div class="rss-grid mt-5">
+      <div class="card card-body" style="grid-column: span 2;">
         <div class="stat-label">Feeds</div>
         <div class="stat-value">{{ feeds.length }}</div>
       </div>
-      <div>
+      <div class="card card-body">
         <div class="stat-label">Archiviert</div>
         <div class="stat-value text-emerald">{{ counts?.archived ?? 0 }}</div>
       </div>
-      <div>
+      <div class="card card-body">
         <div class="stat-label">Übersprungen</div>
         <div class="stat-value">{{ counts?.skipped ?? 0 }}</div>
       </div>
-      <div>
+      <div class="card card-body">
         <div class="stat-label" title="Retry, Live-Warteschlange und endgültige Fehler">
           Wartet / Fehler
         </div>
@@ -78,31 +78,31 @@ function formatTs(ts: number | null | undefined): string {
           {{ (counts?.failed ?? 0) + (counts?.retry ?? 0) + (counts?.live ?? 0) }}
         </div>
       </div>
-      <div>
+      <div class="card card-body">
         <div class="stat-label">Letzter Lauf</div>
-        <div class="text-sm font-semibold">{{ formatTs(rss?.last_poll_finished) }}</div>
+        <div class="text-sm font-semibold text-text">{{ formatTs(rss?.last_poll_finished) }}</div>
       </div>
     </div>
 
-    <div v-if="feeds.length === 0" class="rounded-lg border border-card-border px-3 py-3 text-sm text-muted">
+    <div v-if="feeds.length === 0" class="mt-4 rounded-lg border border-card-border/60 px-3 py-3 text-sm text-text-muted">
       Keine RSS-Feeds geladen – bitte RSS_FEED_URLS bzw. OPML-Quelle prüfen.
     </div>
 
-    <div v-else class="divide-y divide-card-border/60">
+    <div v-else class="mt-4">
       <div
         v-for="feed in feeds"
         :key="feed.title + feed.host"
-        class="flex items-center justify-between gap-3 py-2"
+        class="rss-row"
       >
-        <div class="flex min-w-0 items-center gap-2">
+        <div class="flex min-w-0 items-center gap-3">
           <span
-            class="h-2 w-2 shrink-0 rounded-full"
-            :class="feed.error ? 'bg-rose' : feed.last_check ? 'bg-emerald' : 'bg-slate-600'"
+            class="rss-dot"
+            :class="feed.error ? 'rss-dot-error' : feed.last_check ? 'rss-dot-ok' : 'rss-dot-idle'"
           ></span>
-          <span class="truncate font-semibold">{{ feed.title }}</span>
-          <span v-if="feed.bundle" class="text-[0.7rem] text-muted">BUNDLE</span>
+          <span class="truncate font-display font-semibold text-text">{{ feed.title }}</span>
+          <span v-if="feed.bundle" class="text-[0.7rem] text-text-muted">BUNDLE</span>
         </div>
-        <span class="shrink-0 text-right text-xs text-muted">
+        <span class="shrink-0 text-right text-xs text-text-muted">
           {{ feed.error || `${feed.items || 0} Items${feed.last_check ? ' • ' + formatTs(feed.last_check) : ''}` }}
         </span>
       </div>

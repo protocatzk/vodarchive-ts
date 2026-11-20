@@ -1,4 +1,4 @@
-# VODArchive (TypeScript + Vue Rewrite)
+# voduploader (TypeScript + Vue, Archive-Design)
 
 Neuauflage des `streamrecorder-n8n-vod-uploader` als **TypeScript-Backend (Express)** mit
 **Vue-3-Frontend (Vite + Tailwind)**. Die urspüngliche Python-Implementierung liegt als
@@ -36,6 +36,16 @@ n8n steht unter der **Sustainable Use License** (Fair-Code). Das Selbsthosten
 und Ausführen eigener Workflows für den eigenen Betrieb ist erlaubt; das
 Anbieten von n8n als Dienst für Dritte ist eingeschränkt. Das hier umgesetzte
 Auslösen eigener Webhooks (manuell oder zeitgesteuert) ist damit unproblematisch.
+
+## Design (Archive)
+
+Neues Vue-Design mit „Vellum"-Charakter:
+
+- **Typografie**: Playfair Display (Serif) für Headlines (`font-display`), Inter für Body
+- **Palette**: Dark Ink `#0c0f16`, Paper `#e7e1d0`, Warm Gold `#d4a35e`, Dusty Green, Pillar Rose
+- **Texture**: Faint Noise-Grain über `body::before`
+- **Komponenten**: Vellum-Job-Box, Lack-Progress-Bar, History-Karten mit serif Ziffern, Status-Badges, RSS-Punkte, Terminal-Log-Konsole mit Papiertime, Edit-Modal mit Gold-Border
+- **Seiten**: Login als „Eintrittsschein", Dashboard als Archiv-Übersicht, Topics/Sources/Workflows/Settings dezent ausgelegt
 
 Das Backend ist so aufgebaut, dass die fehlenden Teile hinter klaren Schnittstellen
 (`src/backend/telegram/gateway.ts`, `src/backend/rss/archiver.ts`, Upload-Worker)

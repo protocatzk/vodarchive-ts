@@ -18,19 +18,28 @@ async function logout(): Promise<void> {
 
 <template>
   <header
-    class="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-card-border pb-5"
+    class="mb-8 flex flex-wrap items-center justify-between gap-6 border-b border-card-border pb-5"
   >
-    <div class="flex items-center gap-3">
-      <div
-        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-cyan shadow-brand-glow"
-      >
-        <svg viewBox="0 0 24 24" class="h-6 w-6 fill-white">
-          <path d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10.5 6l-5-3v6l5-3z" />
+    <div class="flex items-baseline gap-4">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 28 28" class="h-6 w-6">
+          <!-- Buch mit Zierrand (Archiv-Symbol) -->
+          <path d="M5 5h18a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <path d="M9 3.5v20M15 3.5v20" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+          <path d="M5 9h18" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+          <path d="M9.5 11h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+          <path d="M9.5 15h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
+          <path d="M9.5 19h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
         </svg>
       </div>
-      <div>
-        <div class="text-lg font-bold tracking-tight">Ripper VOD Uploader</div>
-        <div class="text-xs text-muted">Automatisches Telegram Topic-Archiv</div>
+      <div class="leading-tight">
+        <div class="brand-title">voduploader</div>
+        <div class="brand-subtitle">Archivierung von Stream-VODs</div>
+        <div class="brand-tags">
+          <span>Telegram</span>
+          <span>rss.app</span>
+          <span>VOD</span>
+        </div>
       </div>
     </div>
 

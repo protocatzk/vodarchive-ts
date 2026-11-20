@@ -2,7 +2,6 @@
 import type { HistoryItem } from '../types';
 
 defineProps<{ history: HistoryItem[] }>();
-const emit = defineEmits<{ (e: 'clear'): void }>();
 
 function statusClass(status: HistoryItem['status']): string {
   if (status === 'success') return 'text-emerald';
@@ -18,53 +17,43 @@ function statusLabel(status: HistoryItem['status']): string {
 </script>
 
 <template>
-  <div class="card">
-    <div class="mb-4 flex items-center justify-between gap-3">
+  <div class="card card-body">
+    <div class="flex flex-wrap items-center justify-between">
       <div class="card-title">Kürzlich archivierte VODs</div>
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-muted">{{ history.length }} Einträge</span>
-        <button
-          type="button"
-          class="btn text-xs"
-          :disabled="history.length === 0"
-          @click="emit('clear')"
-        >
-          Verlauf leeren
-        </button>
-      </div>
+      <span class="text-xs text-text-muted">{{ history.length }} Einträge</span>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
+    <div class="table-wrap">
+      <table class="table">
         <thead>
-          <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
-            <th class="py-2 pr-4 font-medium">Zeitstempel</th>
-            <th class="py-2 pr-4 font-medium">Streamer</th>
-            <th class="py-2 pr-4 font-medium">Titel</th>
-            <th class="py-2 pr-4 font-medium">Dateien / Größe</th>
-            <th class="py-2 pr-4 font-medium">Ziel-Topic</th>
-            <th class="py-2 font-medium">Status</th>
+          <tr>
+            <th class="min-w-[8rem]">Zeitstempel</th>
+            <th class="min-w-[10rem]">Streamer</th>
+            <th class="min-w-[22rem]">Titel</th>
+            <th class="min-w-[6rem]">Größe</th>
+            <th class="min-w-[8rem]">Topic</th>
+            <th class="min-w-[4rem] text-right">Status</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="history.length === 0">
-            <td colspan="6" class="py-8 text-center text-muted">
+            <td colspan="6" class="py-10 text-center text-text-muted">
               Noch keine VODs in dieser Session hochgeladen.
             </td>
           </tr>
           <tr
             v-for="(item, index) in history"
             :key="`${item.finished_at}-${index}`"
-            class="border-b border-card-border/50 last:border-0"
+            class="history-card"
           >
-            <td class="py-2 pr-4 text-muted">{{ item.finished_at }}</td>
-            <td class="py-2 pr-4 font-semibold text-slate-100">{{ item.streamer }}</td>
-            <td class="py-2 pr-4">{{ item.title }}</td>
-            <td class="py-2 pr-4">{{ item.parts }} Teil(e) ({{ item.total_size_mb }} MB)</td>
-            <td class="py-2 pr-4">
+            <td class="history-date">{{ item.finished_at }}</td>
+            <td class="font-display font-semibold text-text">{{ item.streamer }}</td>
+            <td class="font-display text-sm italic text-text">{{ item.title }}</td>
+            <td class="text-muted">{{ item.parts }} Teil(e) ({{ item.total_size_mb }} MB)</td>
+            <td>
               <a
                 v-if="item.topic_id"
-                class="text-cyan hover:underline"
+                class="topic-link"
                 :href="`https://t.me/RippersArchiv/${item.topic_id}`"
                 target="_blank"
                 rel="noopener"
@@ -73,7 +62,7 @@ function statusLabel(status: HistoryItem['status']): string {
               </a>
               <span v-else class="text-muted">-</span>
             </td>
-            <td class="py-2 font-semibold" :class="statusClass(item.status)">
+            <td class="text-right font-semibold" :class="statusClass(item.status)">
               {{ statusLabel(item.status) }}
             </td>
           </tr>

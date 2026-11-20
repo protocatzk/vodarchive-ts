@@ -151,16 +151,10 @@ async function n8nToggle(id: string, active: boolean): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 py-6">
+  <div class="page">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
-
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold">n8n-Workflows</h1>
-      <p class="mt-1 text-sm text-muted">
-        Workflows per Webhook manuell oder zeitgesteuert starten. n8n (Sustainable Use License)
-        darf für den eigenen Betrieb selbst gehostet und ausgeführt werden.
-      </p>
-    </div>
+    <h1 class="page-title mb-0">n8n-Workflows</h1>
+    <p class="page-subtitle text-xs">Manuell, zeitgesteuert oder per n8n-API importiert.</p>
 
     <div class="card mb-6">
       <div class="mb-3 card-title">Workflow hinzufügen</div>

@@ -158,17 +158,11 @@ async function deleteTopic(topicId: number): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 py-6">
+  <div class="page">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
+    <h1 class="page-title mb-0">Topics verwalten</h1>
+    <p class="page-subtitle text-xs">Ordne Streamer-Aliase den Telegram-Foren-Topics zu.</p>
 
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold">Topics verwalten</h1>
-        <p class="mt-1 text-sm text-muted">
-          Ordne Streamer-Aliase den Telegram-Foren-Topics zu. Chat:
-          <span class="text-slate-300">{{ topics.data?.chat_id || '-' }}</span>
-        </p>
-      </div>
       <div class="flex flex-wrap items-center gap-3">
         <select
           v-if="(topics.data?.chats.length ?? 0) > 1"
@@ -183,7 +177,6 @@ async function deleteTopic(topicId: number): Promise<void> {
         <input v-model="topics.search" class="input w-56" placeholder="Suchen…" />
         <span class="text-sm text-muted">{{ summary }}</span>
       </div>
-    </div>
 
     <!-- Neues Topic -->
     <div class="card mb-6">

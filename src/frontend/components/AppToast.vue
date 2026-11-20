@@ -12,7 +12,7 @@ const { messages, dismiss } = useToast();
         :key="message.id"
         class="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg backdrop-blur"
         :class="{
-          'border-rose/40 bg-rose/15 text-rose': message.type === 'error',
+          'border-[rgba(159,61,68,0.4)] bg-[rgba(159,61,68,0.15)] text-rose': message.type === 'error',
           'border-emerald/40 bg-emerald/15 text-emerald': message.type === 'success',
           'border-card-border bg-slate-800/90 text-slate-100': message.type === 'info',
         }"

@@ -159,17 +159,16 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl px-4 py-6">
+  <div class="page">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
-    <div class="mb-6 flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold">Einstellungen</h1>
-        <p class="mt-1 text-sm text-muted">
-          Persistiert in <code class="text-slate-400">data/settings.json</code>. Änderungen gelten
-          sofort, außer Telegram-Zugangsdaten (Neustart nötig).
-        </p>
-      </div>
+    <h1 class="page-title mb-0">Einstellungen</h1>
+    <p class="page-subtitle text-xs mb-5">
+      Persistiert in <code class="text-slate-400">data/settings.json</code>. Änderungen gelten
+      sofort, außer Telegram-Zugangsdaten (Neustart nötig).
+    </p>
+
+    <div class="flex justify-end">
       <button type="button" class="btn btn-primary" :disabled="store.saving || !ready" @click="save">
         {{ store.saving ? 'Speichere…' : 'Speichern' }}
       </button>

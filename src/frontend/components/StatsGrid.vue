@@ -7,24 +7,24 @@ defineProps<{
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <div class="card">
-      <div class="stat-label">Bot Status</div>
-      <div class="stat-value" :class="connected ? 'text-emerald' : 'text-rose'">
+  <div class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="card card-body">
+      <span class="stat-label">Bot Status</span>
+      <span class="stat-value" :class="connected ? 'text-emerald' : 'text-rose'">
         {{ connected ? 'Online' : 'Offline' }}
-      </div>
+      </span>
     </div>
-    <div class="card">
-      <div class="stat-label">Warteschlange</div>
-      <div class="stat-value">{{ queueCount }} Jobs</div>
+    <div class="card card-body">
+      <span class="stat-label">Warteschlange</span>
+      <span class="stat-value">{{ queueCount }} Jobs</span>
     </div>
-    <RouterLink to="/topics" class="card block transition hover:border-primary/40">
-      <div class="stat-label">Topics gemappt</div>
-      <div class="stat-value">{{ topicCount }}</div>
-    </RouterLink>
-    <div class="card">
-      <div class="stat-label">Ziel-Forum</div>
-      <div class="text-lg font-bold text-indigo-300">Ripper Archiv</div>
+    <div class="card card-body">
+      <span class="stat-label">Topics gemappt</span>
+      <span class="stat-value">{{ topicCount }}</span>
+    </div>
+    <div class="card card-body">
+      <span class="stat-label">Ziel-Forum</span>
+      <div class="font-display text-lg font-bold text-primary lg:text-xl">Ripper Archiv</div>
     </div>
   </div>
 </template>

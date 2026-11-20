@@ -88,13 +88,17 @@ async function runN8n(name: string): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto max-w-6xl px-4 py-6">
+  <div class="page">
     <AppHeader :user="user" :connected="dashboard.connected" />
 
-    <div v-if="!snap" class="card py-16 text-center text-muted">Lade Dashboard-Daten…</div>
+    <h1 class="page-title mb-0">voduploader</h1>
+    <p class="page-subtitle text-xs">Archivierung von Stream-VODs – Dashboard</p>
+
+    <div v-if="!snap" class="card card-body mt-6 py-16 text-center text-muted">Lade Dashboard-Daten…</div>
 
     <template v-else>
       <StatsGrid
+        class="mt-6"
         :queue-count="snap.queue_count"
         :topic-count="snap.topic_count"
         :connected="dashboard.connected"
