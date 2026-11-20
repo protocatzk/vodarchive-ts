@@ -11,3 +11,6 @@ legacy/**/__pycache__/
 
 # Workflow-Exporte enthalten echte Cookies/JWTs – nur lokal halten
 legacy/workflows/*.json
+
+# Generierte Konvertate der Legacy-Workflows
+legacy/workflows/converted/

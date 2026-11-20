@@ -12,7 +12,8 @@
     "build:api": "tsc -p tsconfig.json",
     "build:web": "vite build",
     "start": "node dist/backend/main.js",
-    "typecheck": "vue-tsc -p tsconfig.frontend.json --noEmit && tsc -p tsconfig.json --noEmit"
+    "typecheck": "vue-tsc -p tsconfig.frontend.json --noEmit && tsc -p tsconfig.json --noEmit",
+    "convert:legacy": "node scripts/convert-legacy-workflows.mjs"
   },
   "keywords": [
     "vod",

@@ -253,6 +253,21 @@ src/
 Unter **Vorgänge** lassen sich interne JSON-Workflows anlegen. Sie laufen im
 Backend, brauchen kein n8n und werden im Ausführungsprotokoll dokumentiert.
 
+### Legacy-Workflows konvertieren
+
+Das Skript `scripts/convert-legacy-workflows.mjs` übersetzt die alten
+n8n-Exports (Streamrecorder Auto-Downloader) in interne Workflow-Definitionen:
+
+```bash
+pnpm convert:legacy --source-id <QUELLEN-ID>
+# optional direkt in die laufende App importieren:
+pnpm convert:legacy --source-id <QUELLEN-ID> --api https://upload.positronium.dev
+```
+
+Optionen: `--dir`, `--out`, `--interval`, `--keep-chat`, `--cookie`, `--dry-run`.
+Die erzeugten Dateien liegen unter `legacy/workflows/converted/` (gitignored) und
+können auch manuell über die UI eingefügt werden.
+
 - **Trigger:** manuell oder Zeitplan (Intervall)
 - **Schritte:** `log`, `set`, `http.request`, `streamrecorder.recordings`,
   `filter`, `foreach`, `enqueue_upload`, `telegram.send`, `delay`
