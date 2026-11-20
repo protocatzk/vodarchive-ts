@@ -31,16 +31,21 @@ function randomLong(): ReturnType<typeof bigInt> {
   return bigInt.randBetween(bigInt(1), bigInt('9007199254740991'));
 }
 
+type ServiceOrMessage = Api.Message | Api.MessageService;
+
 function collectMessageIds(
   result: Api.TypeUpdates,
-  predicate?: (message: Api.Message) => boolean,
+  predicate?: (message: ServiceOrMessage) => boolean,
 ): number[] {
   const updates = (result as { updates?: Api.TypeUpdate[] }).updates ?? [];
   const ids: number[] = [];
   for (const update of updates) {
     if (update instanceof Api.UpdateNewMessage || update instanceof Api.UpdateNewChannelMessage) {
       const message = update.message;
-      if (message instanceof Api.Message && (!predicate || predicate(message))) {
+      if (
+        (message instanceof Api.Message || message instanceof Api.MessageService) &&
+        (!predicate || predicate(message))
+      ) {
         ids.push(message.id);
       }
     }
@@ -287,15 +292,63 @@ export class GramJsTelegramGateway implements TelegramGateway {
 
     const created = collectMessageIds(
       result,
-      (message) => message.action instanceof Api.MessageActionTopicCreate,
+      (message) =>
+        'action' in message && message.action instanceof Api.MessageActionTopicCreate,
     );
-    const fallback = created.length ? created : collectMessageIds(result);
-    const topicId = fallback[0];
+    let topicId = (created.length ? created : collectMessageIds(result))[0];
+
+    // Service-Messages / Updates koennen fehlen: nach kurzer Wartezeit ueber
+    // die Themenliste nachschlagen.
+    if (!topicId) {
+      for (let attempt = 0; attempt < 3 && !topicId; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 800 : 1500));
+        topicId = (await this.findForumTopicByTitle(channel, cleanTitle)) ?? undefined;
+      }
+    }
+
     if (!topicId) {
       throw new Error(`Konnte Topic-ID für '${cleanTitle}' aus Telegram-Antwort nicht ermitteln.`);
     }
     logger.info(`Neues Forum-Topic '${cleanTitle}' erstellt (ID ${topicId}).`);
     return topicId;
+  }
+
+  /** Sucht ein Forum-Topic anhand seines Titels (Fallback nach dem Anlegen). */
+  private async findForumTopicByTitle(
+    channel: Api.TypeEntityLike,
+    title: string,
+  ): Promise<number | null> {
+    const client = this.requireClient();
+    const result = await client.invoke(
+      new Api.channels.GetForumTopics({
+        channel,
+        q: title,
+        offsetDate: 0,
+        offsetId: 0,
+        offsetTopic: 0,
+        limit: 100,
+      }),
+    );
+    const topics = (result as { topics?: Api.TypeForumTopic[] }).topics ?? [];
+    const wanted = title.trim().toLowerCase();
+    for (const topic of topics) {
+      if ('title' in topic && String(topic.title).trim().toLowerCase() === wanted) {
+        return topic.id;
+      }
+    }
+    const messages = (result as { messages?: Api.TypeMessage[] }).messages ?? [];
+    for (const message of messages) {
+      if (message instanceof Api.MessageService || message instanceof Api.Message) {
+        if (
+          'action' in message &&
+          message.action instanceof Api.MessageActionTopicCreate &&
+          message.action.title.trim().toLowerCase() === wanted
+        ) {
+          return message.id;
+        }
+      }
+    }
+    return null;
   }
 
   async forwardMessages(
