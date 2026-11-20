@@ -17,22 +17,24 @@ const levelClass: Record<LogLine['level'], string> = {
   INFO: 'log-info',
   WARNING: 'log-warning',
   ERROR: 'log-error',
-  DEBUG: 'text-slate-500',
+  DEBUG: 'text-[var(--ink-faint)]',
 };
 </script>
 
 <template>
-  <div class="card card-body">
-    <div class="flex flex-wrap items-center justify-between">
-      <div class="card-title">Archivierungsprotokoll</div>
-      <span class="text-xs text-text-muted">Echtzeit-Meldungen</span>
+  <div>
+    <div class="sheet-head">
+      <div class="sheet-title">Archivierungsprotokoll</div>
+      <span class="meta">Echtzeit · Schreibmaschine</span>
     </div>
     <div ref="consoleEl" class="logs-console">
-      <div v-if="props.logs.length === 0" class="text-slate-500">Verbinde mit Live-Log Stream...</div>
+      <div v-if="props.logs.length === 0" style="color: var(--ink-faint)">
+        Verbinde mit dem Protokoll …
+      </div>
       <div v-for="(line, index) in props.logs" :key="index" class="log-line">
-        <span class="text-[rgba(122,113,95,0.6)]">{{ line.time }}</span>
+        <span style="color: var(--ink-faint)">{{ line.time }}</span>
         <span :class="levelClass[line.level]"> [{{ line.level }}]</span>
-        <span class="text-text/90"> {{ line.message }}</span>
+        <span> {{ line.message }}</span>
       </div>
     </div>
   </div>

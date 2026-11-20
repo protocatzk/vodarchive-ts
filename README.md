@@ -37,15 +37,15 @@ und Ausführen eigener Workflows für den eigenen Betrieb ist erlaubt; das
 Anbieten von n8n als Dienst für Dritte ist eingeschränkt. Das hier umgesetzte
 Auslösen eigener Webhooks (manuell oder zeitgesteuert) ist damit unproblematisch.
 
-## Design (Archive)
+## Design (Altes Archiv)
 
-Neues Vue-Design mit „Vellum"-Charakter:
+Die Oberfläche ist als „Archivraum" aufgebaut:
 
-- **Typografie**: Playfair Display (Serif) für Headlines (`font-display`), Inter für Body
-- **Palette**: Dark Ink `#0c0f16`, Paper `#e7e1d0`, Warm Gold `#d4a35e`, Dusty Green, Pillar Rose
-- **Texture**: Faint Noise-Grain über `body::before`
-- **Komponenten**: Vellum-Job-Box, Lack-Progress-Bar, History-Karten mit serif Ziffern, Status-Badges, RSS-Punkte, Terminal-Log-Konsole mit Papiertime, Edit-Modal mit Gold-Border
-- **Seiten**: Login als „Eintrittsschein", Dashboard als Archiv-Übersicht, Topics/Sources/Workflows/Settings dezent ausgelegt
+- **Papier & Tinte**: Parchment-Hintergrund mit Faser-/Alterungstextur, Tinte `#2a2318`, Oxblood `#8a2f2b`, Messing `#9a7426`
+- **Typografie**: Playfair Display (Titel), EB Garamond (Fließtext), Special Elite (Schreibmaschinen-Metadaten, Stempel)
+- **Struktur**: Masthead mit Wappen und „Stand"-Vermerk, Aktenreiter als Navigation, jede Sektion als Aktenblatt (`sheet`) mit Reiter
+- **Bestandteile**: Karteikarten für Kennzahlen, Vorgangsbogen mit roter Aktenrandlinie und gestempelter Fortschrittsleiste, Bestandsbuch als liniertes Register, Stempel (Archiviert/In Arbeit/Fehler), Zugangsbuch für RSS, Schreibmaschinen-Protokoll
+- **Login**: Lesesaal-Ausweis (Zutrittskarte)
 
 Das Backend ist so aufgebaut, dass die fehlenden Teile hinter klaren Schnittstellen
 (`src/backend/telegram/gateway.ts`, `src/backend/rss/archiver.ts`, Upload-Worker)

@@ -6,37 +6,36 @@ const emit = defineEmits<{ (e: 'cancel', key: string): void }>();
 </script>
 
 <template>
-  <div class="card card-body">
-    <div class="flex flex-wrap items-center justify-between">
-      <div class="card-title">Warteschlange</div>
-      <span class="badge badge-idle">{{ queue.length }} wartend</span>
+  <div>
+    <div class="sheet-head">
+      <div class="sheet-title">Warteschlange</div>
+      <span class="stamp" :class="queue.length ? 'stamp-brass' : 'stamp-muted'">
+        {{ queue.length }} wartend
+      </span>
     </div>
 
-    <div v-if="queue.length === 0" class="mt-4 text-sm text-text-muted">
-      Keine wartenden Aufnahmen.
+    <div v-if="queue.length === 0" class="py-12 text-center">
+      <div class="typewriter text-sm" style="color: var(--ink-soft)">Keine wartenden Vorgänge.</div>
+      <div class="mt-2 text-sm italic" style="color: var(--ink-faint)">Das Regal ist leer.</div>
     </div>
 
-    <ul v-else class="mt-4 space-y-2">
-      <li
-        v-for="(item, index) in queue"
-        :key="item.key"
-        class="queue-item"
-      >
-        <div class="min-w-0">
-          <div class="font-display font-semibold text-text">{{ item.streamer }}</div>
-          <div class="font-display text-sm italic text-text-muted truncate">{{ item.title }}</div>
+    <ul v-else class="space-y-2">
+      <li v-for="(item, index) in queue" :key="item.key" class="queue-item">
+        <div class="flex min-w-0 items-baseline gap-3">
+          <span class="typewriter text-xs" style="color: var(--ink-faint)">#{{ index + 1 }}</span>
+          <div class="min-w-0">
+            <div class="font-display font-semibold leading-tight">{{ item.streamer }}</div>
+            <div class="job-stage truncate">{{ item.title }}</div>
+          </div>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <span class="stat-label">#{{ index + 1 }}</span>
-          <button
-            type="button"
-            class="btn btn-danger !px-2 !py-0.5 text-xs"
-            title="Job abbrechen"
-            @click="emit('cancel', item.key)"
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          type="button"
+          class="btn btn-danger !px-2 !py-0.5"
+          title="Vorgang abbrechen"
+          @click="emit('cancel', item.key)"
+        >
+          ✕
+        </button>
       </li>
     </ul>
   </div>

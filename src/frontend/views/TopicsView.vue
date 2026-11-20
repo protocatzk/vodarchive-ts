@@ -63,7 +63,7 @@ async function addTopic(): Promise<void> {
     return;
   }
   if (!createInTelegram.value && !newTopicId.value.trim()) {
-    show('Bitte eine Topic-ID angeben oder „Im Telegram-Forum erstellen“ aktivieren.', 'error');
+    show('Bitte eine Topic-ID angeben oder „Im Telegram-Forum erstellen" aktivieren.', 'error');
     return;
   }
   adding.value = true;
@@ -158,159 +158,135 @@ async function deleteTopic(topicId: number): Promise<void> {
 </script>
 
 <template>
-  <div class="page">
+  <div class="folio">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
-    <h1 class="page-title mb-0">Topics verwalten</h1>
-    <p class="page-subtitle text-xs">Ordne Streamer-Aliase den Telegram-Foren-Topics zu.</p>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <select
-          v-if="(topics.data?.chats.length ?? 0) > 1"
-          class="input w-auto"
-          :value="topics.data?.chat_id"
-          @change="onChatChange"
-        >
-          <option v-for="chat in topics.data?.chats ?? []" :key="chat" :value="chat">
-            {{ chat }}{{ chat === topics.data?.forum_chat_id ? ' (Forum)' : '' }}
-          </option>
-        </select>
-        <input v-model="topics.search" class="input w-56" placeholder="Suchen…" />
-        <span class="text-sm text-muted">{{ summary }}</span>
-      </div>
+    <h1 class="page-title">Register der Themen</h1>
+    <p class="page-subtitle">Zuordnung der Streamer-Aliase zu Telegram-Foren-Themen.</p>
 
-    <!-- Neues Topic -->
-    <div class="card mb-6">
-      <div class="mb-3 card-title">Topic hinzufügen</div>
-      <form class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end" @submit.prevent="addTopic">
-        <div>
-          <label class="stat-label mb-1 block">Name / Alias</label>
-          <input v-model="newName" class="input" placeholder="z. B. MontanaBlack" />
-        </div>
-        <div>
-          <label class="stat-label mb-1 block">Topic-ID</label>
-          <input
-            v-model="newTopicId"
-            class="input"
-            :disabled="createInTelegram"
-            placeholder="z. B. 12345"
-          />
-        </div>
-        <label class="flex items-center gap-2 text-sm text-slate-300">
-          <input v-model="createInTelegram" type="checkbox" class="h-4 w-4 accent-indigo-500" />
-          Im Telegram-Forum erstellen
-        </label>
-        <button type="submit" class="btn btn-primary" :disabled="adding">
-          {{ adding ? 'Speichere…' : 'Hinzufügen' }}
-        </button>
-      </form>
+    <div class="mb-6 flex flex-wrap items-center gap-3">
+      <select
+        v-if="(topics.data?.chats.length ?? 0) > 1"
+        class="input w-auto"
+        :value="topics.data?.chat_id"
+        @change="onChatChange"
+      >
+        <option v-for="chat in topics.data?.chats ?? []" :key="chat" :value="chat">
+          {{ chat }}{{ chat === topics.data?.forum_chat_id ? ' (Forum)' : '' }}
+        </option>
+      </select>
+      <input v-model="topics.search" class="input w-56" placeholder="Im Register suchen …" />
+      <span class="meta">{{ summary }}</span>
     </div>
 
-    <!-- Tabelle -->
-    <div class="card">
-      <div class="overflow-x-auto">
-        <table v-if="topics.filteredTopics.length > 0" class="w-full text-left text-sm">
+    <section class="sheet mb-6">
+      <div class="sheet-tab">Neuer Eintrag</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Topic hinzufügen</div>
+        <span class="meta">Register · {{ topics.data?.chat_id || '—' }}</span>
+      </div>
+      <form
+        class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 lg:items-end"
+        @submit.prevent="addTopic"
+      >
+        <label>
+          <span class="form-label">Name / Alias</span>
+          <input v-model="newName" class="input" placeholder="z. B. MontanaBlack" />
+        </label>
+        <label>
+          <span class="form-label">Topic-ID</span>
+          <input v-model="newTopicId" class="input" :disabled="createInTelegram" placeholder="z. B. 12345" />
+        </label>
+        <label class="form-check">
+          <input v-model="createInTelegram" type="checkbox" />
+          Im Telegram-Forum anlegen
+        </label>
+        <button type="submit" class="btn btn-primary" :disabled="adding">
+          {{ adding ? 'Wird eingetragen …' : 'Eintragen' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="sheet">
+      <div class="sheet-tab">Bestand</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Zuordnungen</div>
+        <span class="meta">{{ topics.data?.topics.length ?? 0 }} Einträge</span>
+      </div>
+
+      <div v-if="topics.filteredTopics.length > 0" class="table-wrap">
+        <table class="table">
           <thead>
-            <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
-              <th class="py-2 pr-4 font-medium">Name</th>
-              <th class="py-2 pr-4 font-medium">Topic</th>
-              <th class="py-2 pr-4 font-medium">Aliase</th>
-              <th class="py-2 font-medium">Aktionen</th>
+            <tr>
+              <th class="min-w-[12rem]">Name</th>
+              <th class="min-w-[6rem]">Topic</th>
+              <th class="min-w-[18rem]">Aliase</th>
+              <th class="min-w-[16rem]">Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="topic in topics.filteredTopics"
-              :key="topic.topic_id"
-              class="border-b border-card-border/50 last:border-0"
-            >
-              <td class="py-3 pr-4 font-semibold text-slate-100">{{ topic.name }}</td>
-              <td class="py-3 pr-4">
-                <span class="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-cyan">
-                  #{{ topic.topic_id }}
-                </span>
+            <tr v-for="topic in topics.filteredTopics" :key="topic.topic_id">
+              <td class="font-display font-semibold">{{ topic.name }}</td>
+              <td>
+                <span class="typewriter text-xs" style="color: var(--oxblood)">#{{ topic.topic_id }}</span>
               </td>
-              <td class="py-3 pr-4">
+              <td>
                 <div class="flex flex-wrap gap-1">
-                  <span
-                    v-for="alias in topic.aliases.slice(0, 4)"
-                    :key="alias"
-                    class="rounded-full border border-card-border bg-white/5 px-2 py-0.5 text-xs"
-                  >
-                    {{ alias }}
-                  </span>
-                  <span
-                    v-if="topic.aliases.length > 4"
-                    class="rounded-full border border-card-border bg-white/5 px-2 py-0.5 text-xs text-muted"
-                  >
-                    +{{ topic.aliases.length - 4 }}
-                  </span>
+                  <span v-for="alias in topic.aliases.slice(0, 4)" :key="alias" class="chip">{{ alias }}</span>
+                  <span v-if="topic.aliases.length > 4" class="chip chip-more">+{{ topic.aliases.length - 4 }}</span>
                 </div>
               </td>
-              <td class="py-3">
+              <td>
                 <div class="flex flex-wrap gap-2">
-                  <a class="btn text-xs" :href="topic.link" target="_blank" rel="noopener">Öffnen</a>
-                  <button type="button" class="btn text-xs" @click="openEdit(topic.topic_id)">
-                    Bearbeiten
-                  </button>
-                  <button type="button" class="btn btn-danger text-xs" @click="deleteTopic(topic.topic_id)">
-                    Löschen
-                  </button>
+                  <a class="btn" :href="topic.link" target="_blank" rel="noopener">Öffnen</a>
+                  <button type="button" class="btn" @click="openEdit(topic.topic_id)">Bearbeiten</button>
+                  <button type="button" class="btn btn-danger" @click="deleteTopic(topic.topic_id)">Löschen</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
-
-        <div v-else class="py-12 text-center text-sm text-muted">
-          {{ topics.data?.topics.length ? 'Kein Topic passt zur Suche.' : 'Füge oben ein Topic hinzu.' }}
-        </div>
       </div>
-    </div>
 
-    <!-- Edit-Modal -->
+      <div v-else class="py-12 text-center italic" style="color: var(--ink-faint)">
+        {{ topics.data?.topics.length ? 'Kein Eintrag passt zur Suche.' : 'Das Register ist leer – trage oben ein Topic ein.' }}
+      </div>
+    </section>
+
+    <!-- Bearbeitungsbogen -->
     <div
       v-if="editingTopic"
-      class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4"
+      class="fixed inset-0 z-40 flex items-center justify-center p-4"
+      style="background: rgba(42, 35, 24, 0.55)"
       @click.self="closeEdit"
     >
-      <div class="card max-h-[90vh] w-full max-w-lg overflow-y-auto">
-        <div class="mb-1 flex items-center justify-between">
-          <h2 class="text-lg font-bold">{{ editingTopic.name }}</h2>
-          <button type="button" class="btn !px-2 !py-0.5 text-xs" @click="closeEdit">✕</button>
+      <div class="sheet w-full max-w-lg" style="max-height: 90vh; overflow-y: auto">
+        <div class="sheet-head">
+          <div class="sheet-title">{{ editingTopic.name }}</div>
+          <button type="button" class="btn btn-ghost" @click="closeEdit">✕</button>
         </div>
-        <div class="mb-4 text-xs text-muted">
-          {{ editingTopic.aliases.length }} Alias(e) · Topic #{{ editingTopic.topic_id }}
-        </div>
+        <div class="meta mb-4">{{ editingTopic.aliases.length }} Alias(e) · Topic #{{ editingTopic.topic_id }}</div>
 
-        <div class="mb-4">
-          <label class="stat-label mb-1 block">Topic-ID ändern</label>
+        <div class="mb-5">
+          <span class="form-label">Topic-ID ändern</span>
           <div class="flex gap-2">
             <input v-model="editTopicId" class="input" placeholder="Neue Topic-ID" />
             <button type="button" class="btn btn-primary" :disabled="savingEdit" @click="saveEdit">
-              {{ savingEdit ? 'Speichere…' : 'Speichern' }}
+              {{ savingEdit ? 'Speichern …' : 'Speichern' }}
             </button>
           </div>
         </div>
 
-        <div class="mb-4">
-          <label class="stat-label mb-1 block">Aliase</label>
+        <div class="mb-5">
+          <span class="form-label">Aliase</span>
           <div class="flex flex-wrap gap-1">
-            <span
-              v-for="alias in editingTopic.aliases"
-              :key="alias"
-              class="inline-flex items-center gap-1 rounded-full border border-card-border bg-white/5 px-2 py-0.5 text-xs"
-            >
+            <span v-for="alias in editingTopic.aliases" :key="alias" class="chip">
               {{ alias }}
-              <button
-                type="button"
-                class="text-rose hover:text-rose/70"
-                title="Alias entfernen"
-                @click="removeAlias(alias)"
-              >
+              <button type="button" class="ml-1" style="color: var(--oxblood)" title="Alias entfernen" @click="removeAlias(alias)">
                 ×
               </button>
             </span>
-            <span v-if="editingTopic.aliases.length === 0" class="text-xs text-muted">Keine Aliase.</span>
+            <span v-if="editingTopic.aliases.length === 0" class="meta">Keine Aliase.</span>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useDashboardStore } from '../stores/dashboard';
@@ -9,6 +10,14 @@ const auth = useAuthStore();
 const dashboard = useDashboardStore();
 const router = useRouter();
 
+const stand = computed(() =>
+  new Date().toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }),
+);
+
 async function logout(): Promise<void> {
   dashboard.disconnect();
   await auth.logout();
@@ -17,49 +26,41 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <header
-    class="mb-8 flex flex-wrap items-center justify-between gap-6 border-b border-card-border pb-5"
-  >
-    <div class="flex items-baseline gap-4">
-      <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 28 28" class="h-6 w-6">
-          <!-- Buch mit Zierrand (Archiv-Symbol) -->
-          <path d="M5 5h18a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.2" />
-          <path d="M9 3.5v20M15 3.5v20" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
-          <path d="M5 9h18" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
-          <path d="M9.5 11h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
-          <path d="M9.5 15h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
-          <path d="M9.5 19h5" stroke="currentColor" stroke-width="0.9" stroke-linecap="round" />
-        </svg>
-      </div>
-      <div class="leading-tight">
-        <div class="brand-title">voduploader</div>
-        <div class="brand-subtitle">Archivierung von Stream-VODs</div>
-        <div class="brand-tags">
-          <span>Telegram</span>
-          <span>rss.app</span>
-          <span>VOD</span>
+  <header class="masthead">
+    <div class="masthead-row">
+      <div class="crest">
+        <div class="crest-mark" aria-hidden="true">
+          <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.1">
+            <path d="M5 5h18a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
+            <path d="M9 3.5v20M15 3.5v20" stroke-width="0.8" />
+            <path d="M5 9h18" stroke-width="0.8" />
+            <path d="M9.5 11h4.5M9.5 14.5h4.5M9.5 18h4.5" stroke-width="0.8" stroke-linecap="round" />
+          </svg>
         </div>
+        <div>
+          <div class="eyebrow">Bestand VOD · Registratur</div>
+          <div class="wordmark">voduploader</div>
+          <div class="tagline">Archiv für Stream-Aufzeichnungen</div>
+        </div>
+      </div>
+
+      <div class="registry">
+        <span>
+          <span class="dot" :class="connected ? 'online' : 'offline'"></span>
+          {{ connected ? 'verbunden' : 'offline' }}
+        </span>
+        <span>Leser: <strong>{{ user || 'Gast' }}</strong></span>
+        <span>Stand: <strong>{{ stand }}</strong></span>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
-      <div
-        class="flex items-center gap-2 rounded-full border border-card-border bg-white/5 px-3 py-1.5 text-sm font-medium"
-      >
-        <span
-          class="h-2 w-2 rounded-full"
-          :class="connected ? 'bg-emerald' : 'bg-rose'"
-          :title="connected ? 'Live-Verbindung aktiv' : 'Keine Live-Verbindung'"
-        ></span>
-        <span>{{ user || 'Autorisiert' }}</span>
-      </div>
-      <RouterLink to="/" class="btn" active-class="bg-white/10">Dashboard</RouterLink>
-      <RouterLink to="/topics" class="btn" active-class="bg-white/10">Topics</RouterLink>
-      <RouterLink to="/sources" class="btn" active-class="bg-white/10">Quellen</RouterLink>
-      <RouterLink to="/workflows" class="btn" active-class="bg-white/10">Workflows</RouterLink>
-      <RouterLink to="/settings" class="btn" active-class="bg-white/10">Einstellungen</RouterLink>
-      <button type="button" class="btn btn-danger" @click="logout">Abmelden</button>
-    </div>
+    <nav class="tabs" aria-label="Hauptbereiche">
+      <RouterLink to="/" class="tab">Ablage</RouterLink>
+      <RouterLink to="/topics" class="tab">Register</RouterLink>
+      <RouterLink to="/sources" class="tab">Zugänge</RouterLink>
+      <RouterLink to="/workflows" class="tab">Vorgänge</RouterLink>
+      <RouterLink to="/settings" class="tab">Ordnung</RouterLink>
+      <button type="button" class="tab tab-out" @click="logout">Abmelden</button>
+    </nav>
   </header>
 </template>

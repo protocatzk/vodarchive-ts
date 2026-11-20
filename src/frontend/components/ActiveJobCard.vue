@@ -15,56 +15,48 @@ const cancelling = computed(() => props.job?.stage === 'cancelling');
 </script>
 
 <template>
-  <div class="card job-box h-full flex flex-col">
-    <div class="card-inner flex flex-1 flex-col">
-      <div class="flex items-center justify-between">
-        <div class="flex items-baseline gap-3">
-          <div class="brand-mark hidden h-8 w-8 sm:block">
-            <svg viewBox="0 0 28 28" class="h-5 w-5"><path d="M5 5h18a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.2" /><path d="M9 3.5v20M15 3.5v20" stroke="currentColor" stroke-width="0.9" /><path d="M5 9h18" stroke="currentColor" stroke-width="0.9" /></svg>
-          </div>
-          <div>
-            <div class="stat-label">Aktiver Upload</div>
-            <h3 class="font-display text-base font-semibold tracking-tight text-text">{{ job?.streamer || 'Unbekannt' }}</h3>
-            <div class="font-display text-sm italic text-text-muted truncate">{{ job?.title || 'Kein Titel' }}</div>
-          </div>
+  <div>
+    <div class="sheet-head">
+      <div class="sheet-title">Aktiver Vorgang</div>
+      <span class="stamp" :class="job ? 'stamp-red' : 'stamp-muted'">
+        {{ job ? 'IN ARBEIT' : 'LEER' }}
+      </span>
+    </div>
+
+    <div v-if="!job" class="py-12 text-center">
+      <div class="typewriter text-sm" style="color: var(--ink-soft)">Kein Vorgang in Bearbeitung.</div>
+      <div class="mt-2 text-sm italic" style="color: var(--ink-faint)">
+        Das Archiv wartet auf neue Aufnahmen aus n8n.
+      </div>
+    </div>
+
+    <div v-else class="job-box">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="stat-label">Streamer</div>
+          <div class="font-display text-lg font-bold leading-tight">{{ job?.streamer || 'Unbekannt' }}</div>
+          <div class="job-stage truncate">{{ job?.title || 'Kein Titel' }}</div>
         </div>
-        <span class="badge" :class="job ? 'badge-live' : 'badge-idle'">{{ job ? 'AKTIV' : 'IDLE' }}</span>
+        <span class="chip flex-none">Nr. {{ job?.job_id }}</span>
       </div>
 
-      <div v-if="!job" class="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
-        <svg viewBox="0 0 28 28" class="h-9 w-9 text-text-muted"><path d="M14 6v16" stroke="currentColor" stroke-width="1.2"/></svg>
-        <div class="font-display text-sm text-text">Aktuell kein aktiver Upload.</div>
-        <div class="max-w-sm text-xs text-text-muted">Der Bot wartet auf neue Aufnahmen aus n8n.</div>
+      <div class="mt-5 flex items-baseline justify-between">
+        <span class="stat-label">{{ job?.stage_label || 'Fortschritt' }}</span>
+        <span class="job-pct">{{ job?.pct }}%</span>
+      </div>
+      <div class="job-bar mt-1">
+        <div class="job-bar-fill" :style="{ width: `${job?.pct ?? 0}%` }"></div>
       </div>
 
-      <div v-else class="space-y-4">
-        <div>
-          <div class="job-stage">{{ job.title || 'Kein Titel' }}</div>
-          <div class="flex flex-wrap items-baseline gap-2">
-            <span class="font-display text-xl font-bold text-text">{{ job.pct }}%</span>
-            <span class="text-sm text-muted">{{ job.job_id }}</span>
-          </div>
-        </div>
+      <div class="mt-2 flex flex-wrap justify-between gap-2 typewriter text-[0.64rem]" style="color: var(--ink-faint)">
+        <span>{{ doneMb }} / {{ totalMb > 0 ? `${totalMb} MB` : '…' }}</span>
+        <span>{{ [speed, eta].filter(Boolean).join(' · ') || '—' }}</span>
+      </div>
 
-        <div class="job-bar">
-          <div class="job-bar-fill" :style="{ width: `${job.pct}%` }"></div>
-        </div>
-
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="text-xs text-muted">{{ doneMb }} / {{ totalMb > 0 ? `${totalMb} MB` : '...' }}</div>
-          <div class="text-xs text-muted">{{ [speed, eta].filter(Boolean).join(' • ') }}</div>
-        </div>
-
-        <div class="flex justify-end">
-          <button
-            type="button"
-            class="btn btn-danger"
-            :disabled="cancelling"
-            @click="emit('cancel', job?.key ?? '')"
-          >
-            {{ cancelling ? 'Abbruch läuft…' : 'Job abbrechen' }}
-          </button>
-        </div>
+      <div class="mt-4 flex justify-end border-t pt-3" style="border-top: 1px dotted var(--rule)">
+        <button type="button" class="btn btn-danger" :disabled="cancelling" @click="emit('cancel', job?.key ?? '')">
+          {{ cancelling ? 'Abbruch läuft …' : 'Vorgang abbrechen' }}
+        </button>
       </div>
     </div>
   </div>

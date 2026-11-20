@@ -35,7 +35,7 @@ onMounted(async () => {
 });
 
 function formatTs(ts: number | null): string {
-  if (!ts) return '-';
+  if (!ts) return '—';
   return new Date(ts * 1000).toLocaleString('de-DE', {
     day: '2-digit',
     month: '2-digit',
@@ -45,10 +45,10 @@ function formatTs(ts: number | null): string {
 }
 
 function statusClass(status: string | null): string {
-  if (status === 'ok') return 'text-emerald';
-  if (status === 'timeout' || status === 'cooldown') return 'text-amber';
-  if (status === 'failed') return 'text-rose';
-  return 'text-muted';
+  if (status === 'ok') return 'stamp-green';
+  if (status === 'timeout' || status === 'cooldown') return 'stamp-brass';
+  if (status === 'failed') return 'stamp-red';
+  return 'stamp-muted';
 }
 
 async function add(): Promise<void> {
@@ -63,7 +63,7 @@ async function add(): Promise<void> {
       webhookUrl: newUrl.value.trim(),
       intervalSeconds: newInterval.value === '' ? 0 : Number(newInterval.value),
     });
-    show('Workflow hinzugefügt.', 'success');
+    show('Vorgang eingetragen.', 'success');
     newName.value = '';
     newUrl.value = '';
     newInterval.value = '';
@@ -78,9 +78,9 @@ async function run(id: string, name: string): Promise<void> {
   runningId.value = id;
   try {
     const result = await store.run(id);
-    if (result.status === 'ok') show(`Workflow '${name}' gestartet.`, 'success');
-    else if (result.status === 'cooldown') show('Cooldown aktiv oder läuft bereits.', 'info');
-    else show(`Workflow '${name}': ${result.error ?? result.status}`, 'error');
+    if (result.status === 'ok') show(`Vorgang '${name}' ausgelöst.`, 'success');
+    else if (result.status === 'cooldown') show('Sperrfrist aktiv oder läuft bereits.', 'info');
+    else show(`Vorgang '${name}': ${result.error ?? result.status}`, 'error');
   } finally {
     runningId.value = '';
   }
@@ -108,10 +108,10 @@ function onIntervalChange(id: string, event: Event): void {
 }
 
 async function remove(id: string): Promise<void> {
-  if (!window.confirm('Workflow wirklich löschen?')) return;
+  if (!window.confirm('Vorgang wirklich löschen?')) return;
   try {
     await store.remove(id);
-    show('Workflow gelöscht.', 'success');
+    show('Vorgang gelöscht.', 'success');
   } catch (error) {
     show(errorMessage(error), 'error');
   }
@@ -119,7 +119,7 @@ async function remove(id: string): Promise<void> {
 
 async function discover(): Promise<void> {
   await store.discover();
-  if (store.discovered.length > 0) show(`${store.discovered.length} Workflow(s) gefunden.`, 'success');
+  if (store.discovered.length > 0) show(`${store.discovered.length} Vorgänge gefunden.`, 'success');
   else if (store.discoverError) show(store.discoverError, 'error');
 }
 
@@ -134,7 +134,7 @@ function isImported(workflow: { name: string; webhookUrl: string | null }): bool
 async function importOne(id: string, name: string): Promise<void> {
   try {
     const imported = await store.importWorkflow(id);
-    show(imported ? `'${name}' importiert.` : `'${name}' war bereits vorhanden.`, 'success');
+    show(imported ? `'${name}' übernommen.` : `'${name}' war bereits vorhanden.`, 'success');
   } catch (error) {
     show(errorMessage(error), 'error');
   }
@@ -143,7 +143,7 @@ async function importOne(id: string, name: string): Promise<void> {
 async function n8nToggle(id: string, active: boolean): Promise<void> {
   try {
     await store.setActive(id, !active);
-    show(active ? 'Workflow in n8n deaktiviert.' : 'Workflow in n8n aktiviert.', 'success');
+    show(active ? 'Vorgang in n8n gesperrt.' : 'Vorgang in n8n freigegeben.', 'success');
   } catch (error) {
     show(errorMessage(error), 'error');
   }
@@ -151,93 +151,94 @@ async function n8nToggle(id: string, active: boolean): Promise<void> {
 </script>
 
 <template>
-  <div class="page">
+  <div class="folio">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
-    <h1 class="page-title mb-0">n8n-Workflows</h1>
-    <p class="page-subtitle text-xs">Manuell, zeitgesteuert oder per n8n-API importiert.</p>
 
-    <div class="card mb-6">
-      <div class="mb-3 card-title">Workflow hinzufügen</div>
+    <h1 class="page-title">Vorgänge</h1>
+    <p class="page-subtitle">
+      n8n-Workflows – manuell, zeitgesteuert oder über die n8n-Registratur.
+    </p>
+
+    <section class="sheet mb-6">
+      <div class="sheet-tab">Neuer Vorgang</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Workflow hinzufügen</div>
+        <span class="meta">Webhook-Register</span>
+      </div>
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5 lg:items-end">
-        <label class="block">
-          <span class="stat-label mb-1 block">Name</span>
+        <label>
+          <span class="form-label">Name</span>
           <input v-model="newName" class="input" placeholder="z. B. Ripper" />
         </label>
-        <label class="block lg:col-span-2">
-          <span class="stat-label mb-1 block">Webhook-URL</span>
+        <label class="lg:col-span-2">
+          <span class="form-label">Webhook-URL</span>
           <input v-model="newUrl" class="input" placeholder="https://n8n…/webhook/…" />
         </label>
-        <label class="block">
-          <span class="stat-label mb-1 block">Intervall (s, 0 = manuell)</span>
+        <label>
+          <span class="form-label">Intervall (s, 0 = manuell)</span>
           <input v-model="newInterval" type="number" min="0" class="input" placeholder="0" />
         </label>
         <button type="button" class="btn btn-primary" :disabled="adding" @click="add">
-          {{ adding ? 'Füge hinzu…' : 'Hinzufügen' }}
+          {{ adding ? 'Wird eingetragen …' : 'Eintragen' }}
         </button>
       </div>
-    </div>
+    </section>
 
-    <div class="card mb-6">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div class="card-title">n8n-API (Discovery)</div>
+    <section class="sheet mb-6">
+      <div class="sheet-tab">Registratur</div>
+      <div class="sheet-head">
+        <div class="sheet-title">n8n-API · Bestandsabgleich</div>
         <div class="flex items-center gap-2">
-          <span v-if="store.n8nConfigured === false" class="badge badge-idle">nicht verbunden</span>
-          <span v-else-if="store.n8nConfigured" class="badge badge-live">verbunden</span>
-          <button type="button" class="btn text-xs" :disabled="store.discovering" @click="discover">
-            {{ store.discovering ? 'Lade…' : 'Workflows von n8n laden' }}
+          <span class="stamp" :class="store.n8nConfigured ? 'stamp-green' : 'stamp-muted'">
+            {{ store.n8nConfigured ? 'verbunden' : 'offen' }}
+          </span>
+          <button type="button" class="btn" :disabled="store.discovering" @click="discover">
+            {{ store.discovering ? 'Lade …' : 'Vorgänge laden' }}
           </button>
         </div>
       </div>
-      <p class="mb-3 text-xs text-muted">
-        Base URL und API-Key in den
-        <RouterLink to="/settings" class="text-cyan hover:underline">Einstellungen</RouterLink>
-        hinterlegen. Importiert Workflows mit Webhook-Trigger in die lokale Liste.
+      <p class="mb-3 text-sm italic" style="color: var(--ink-soft)">
+        Basis-URL und API-Schlüssel in der
+        <RouterLink to="/settings" class="topic-link">Ordnung</RouterLink> hinterlegen.
       </p>
 
-      <div
-        v-if="store.discoverError"
-        class="mb-3 rounded-lg border border-rose/40 bg-rose/10 px-3 py-2 text-xs text-rose"
-      >
+      <div v-if="store.discoverError" class="mb-3 border px-3 py-2 text-sm" style="border-color: var(--oxblood); color: var(--oxblood)">
         {{ store.discoverError }}
       </div>
 
-      <div v-if="store.discovered.length > 0" class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+      <div v-if="store.discovered.length > 0" class="table-wrap">
+        <table class="table">
           <thead>
-            <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
-              <th class="py-2 pr-4 font-medium">Name</th>
-              <th class="py-2 pr-4 font-medium">Aktiv</th>
-              <th class="py-2 pr-4 font-medium">Webhook</th>
-              <th class="py-2 font-medium">Aktionen</th>
+            <tr>
+              <th class="min-w-[12rem]">Name</th>
+              <th>Status</th>
+              <th class="min-w-[18rem]">Webhook</th>
+              <th class="min-w-[14rem]">Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="workflow in store.discovered"
-              :key="workflow.id"
-              class="border-b border-card-border/50 last:border-0"
-            >
-              <td class="py-2 pr-4 font-semibold text-slate-100">{{ workflow.name }}</td>
-              <td class="py-2 pr-4">
-                <span class="badge" :class="workflow.active ? 'badge-live' : 'badge-idle'">
+            <tr v-for="workflow in store.discovered" :key="workflow.id">
+              <td class="font-display font-semibold">{{ workflow.name }}</td>
+              <td>
+                <span class="stamp" :class="workflow.active ? 'stamp-green' : 'stamp-muted'">
                   {{ workflow.active ? 'aktiv' : 'inaktiv' }}
                 </span>
               </td>
-              <td class="max-w-[22rem] truncate py-2 pr-4 text-muted" :title="workflow.webhookUrl ?? ''">
+              <td class="typewriter text-[0.62rem] max-w-[22rem] truncate" style="color: var(--ink-faint)" :title="workflow.webhookUrl ?? ''">
                 {{ workflow.webhookUrl ?? '— kein Webhook —' }}
               </td>
-              <td class="py-2">
+              <td>
                 <div class="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    class="btn text-xs"
+                    class="btn"
                     :disabled="!workflow.webhookUrl || isImported(workflow)"
                     @click="importOne(workflow.id, workflow.name)"
                   >
-                    {{ isImported(workflow) ? 'Importiert' : 'Importieren' }}
+                    {{ isImported(workflow) ? 'Übernommen' : 'Übernehmen' }}
                   </button>
-                  <button type="button" class="btn text-xs" @click="n8nToggle(workflow.id, workflow.active)">
-                    {{ workflow.active ? 'Deaktivieren' : 'Aktivieren' }}
+                  <button type="button" class="btn" @click="n8nToggle(workflow.id, workflow.active)">
+                    {{ workflow.active ? 'Sperren' : 'Freigeben' }}
                   </button>
                 </div>
               </td>
@@ -245,48 +246,45 @@ async function n8nToggle(id: string, active: boolean): Promise<void> {
           </tbody>
         </table>
       </div>
-      <div v-else-if="!store.discovering && !store.discoverError" class="text-xs text-muted">
-        Noch keine Discovery durchgeführt.
+      <div v-else-if="!store.discovering && !store.discoverError" class="meta">
+        Noch kein Bestandsabgleich durchgeführt.
       </div>
-    </div>
+    </section>
 
-    <div class="card">
-      <div class="mb-4 flex items-center justify-between">
-        <div class="card-title">Konfigurierte Workflows</div>
-        <span class="text-xs text-muted">{{ store.workflows.length }} Workflow(s)</span>
-      </div>
-
-      <div v-if="store.workflows.length === 0" class="py-8 text-center text-sm text-muted">
-        Noch keine Workflows konfiguriert.
+    <section class="sheet">
+      <div class="sheet-tab">Bestand</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Konfigurierte Vorgänge</div>
+        <span class="meta">{{ store.workflows.length }} Einträge</span>
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+      <div v-if="store.workflows.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
+        Noch keine Vorgänge eingetragen.
+      </div>
+
+      <div v-else class="table-wrap">
+        <table class="table">
           <thead>
-            <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
-              <th class="py-2 pr-4 font-medium">Name</th>
-              <th class="py-2 pr-4 font-medium">Webhook</th>
-              <th class="py-2 pr-4 font-medium">Intervall</th>
-              <th class="py-2 pr-4 font-medium">Letzter Lauf</th>
-              <th class="py-2 pr-4 font-medium">Status</th>
-              <th class="py-2 pr-4 font-medium">Läufe</th>
-              <th class="py-2 font-medium">Aktionen</th>
+            <tr>
+              <th class="min-w-[11rem]">Name</th>
+              <th class="min-w-[16rem]">Webhook</th>
+              <th>Intervall</th>
+              <th class="min-w-[9rem]">Letzter Lauf</th>
+              <th>Ergebnis</th>
+              <th>Läufe</th>
+              <th class="min-w-[16rem]">Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="workflow in store.workflows"
-              :key="workflow.id"
-              class="border-b border-card-border/50 last:border-0"
-            >
-              <td class="py-3 pr-4 font-semibold text-slate-100">
-                {{ workflow.name }}
-                <span v-if="!workflow.enabled" class="ml-2 text-xs text-amber">deaktiviert</span>
+            <tr v-for="workflow in store.workflows" :key="workflow.id">
+              <td>
+                <div class="font-display font-semibold">{{ workflow.name }}</div>
+                <div v-if="!workflow.enabled" class="meta" style="color: var(--oxblood)">gesperrt</div>
               </td>
-              <td class="max-w-[20rem] truncate py-3 pr-4 text-muted" :title="workflow.webhookUrl">
+              <td class="typewriter text-[0.62rem] max-w-[20rem] truncate" style="color: var(--ink-faint)" :title="workflow.webhookUrl">
                 {{ workflow.webhookUrl }}
               </td>
-              <td class="py-3 pr-4">
+              <td>
                 <input
                   :value="workflow.intervalSeconds || ''"
                   type="number"
@@ -296,38 +294,36 @@ async function n8nToggle(id: string, active: boolean): Promise<void> {
                   @change="onIntervalChange(workflow.id, $event)"
                 />
               </td>
-              <td class="py-3 pr-4">{{ formatTs(workflow.lastRun) }}</td>
-              <td class="py-3 pr-4">
-                <div class="font-semibold" :class="statusClass(workflow.lastStatus)">
-                  {{ workflow.lastStatus ?? '-' }}
-                </div>
-                <div v-if="workflow.lastError" class="max-w-[16rem] truncate text-xs text-rose" :title="workflow.lastError">
+              <td class="typewriter text-xs">{{ formatTs(workflow.lastRun) }}</td>
+              <td>
+                <span class="stamp" :class="statusClass(workflow.lastStatus)">
+                  {{ workflow.lastStatus ?? 'unbekannt' }}
+                </span>
+                <div v-if="workflow.lastError" class="typewriter text-[0.58rem] mt-1" style="color: var(--oxblood)" :title="workflow.lastError">
                   {{ workflow.lastError }}
                 </div>
               </td>
-              <td class="py-3 pr-4">{{ workflow.runCount }}</td>
-              <td class="py-3">
+              <td class="font-display">{{ workflow.runCount }}</td>
+              <td>
                 <div class="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    class="btn text-xs"
+                    class="btn btn-primary"
                     :disabled="runningId === workflow.id"
                     @click="run(workflow.id, workflow.name)"
                   >
-                    {{ runningId === workflow.id ? 'Startet…' : 'Jetzt starten' }}
+                    {{ runningId === workflow.id ? 'Läuft …' : 'Auslösen' }}
                   </button>
-                  <button type="button" class="btn text-xs" @click="toggle(workflow.id, workflow.enabled)">
-                    {{ workflow.enabled ? 'Deaktivieren' : 'Aktivieren' }}
+                  <button type="button" class="btn" @click="toggle(workflow.id, workflow.enabled)">
+                    {{ workflow.enabled ? 'Sperren' : 'Freigeben' }}
                   </button>
-                  <button type="button" class="btn btn-danger text-xs" @click="remove(workflow.id)">
-                    Löschen
-                  </button>
+                  <button type="button" class="btn btn-danger" @click="remove(workflow.id)">Löschen</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
 </template>

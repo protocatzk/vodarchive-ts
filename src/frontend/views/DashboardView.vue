@@ -88,35 +88,59 @@ async function runN8n(name: string): Promise<void> {
 </script>
 
 <template>
-  <div class="page">
+  <div class="folio">
     <AppHeader :user="user" :connected="dashboard.connected" />
 
-    <h1 class="page-title mb-0">voduploader</h1>
-    <p class="page-subtitle text-xs">Archivierung von Stream-VODs – Dashboard</p>
+    <h1 class="page-title">Ablage</h1>
+    <p class="page-subtitle">Übersicht über Vorgänge, Register und Zugänge des Archivs.</p>
 
-    <div v-if="!snap" class="card card-body mt-6 py-16 text-center text-muted">Lade Dashboard-Daten…</div>
+    <div v-if="!snap" class="sheet typewriter py-16 text-center text-[var(--ink-soft)]">
+      Lade Bestandsdaten …
+    </div>
 
     <template v-else>
       <StatsGrid
-        class="mt-6"
         :queue-count="snap.queue_count"
         :topic-count="snap.topic_count"
         :connected="dashboard.connected"
       />
 
-      <div class="mt-6 space-y-6">
-        <RssCard :rss="snap.rss" @trigger="triggerRss" @backfill="backfillRss" @reset="resetRss" />
-
-        <N8nCard :workflows="snap.n8n_workflows" @run="runN8n" />
-
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ActiveJobCard :job="snap.active_job" :connected="dashboard.connected" @cancel="cancel" />
-          <QueueCard :queue="snap.queue" @cancel="cancel" />
-        </div>
-
-        <HistoryTable :history="snap.history" @clear="clearHistory" />
-        <LiveLogConsole :logs="snap.logs" />
+      <div class="mb-6">
+        <section class="sheet">
+          <div class="sheet-tab">Zugangsbuch</div>
+          <RssCard :rss="snap.rss" @trigger="triggerRss" @backfill="backfillRss" @reset="resetRss" />
+        </section>
       </div>
+
+      <div v-if="snap.n8n_workflows.length" class="mb-6">
+        <section class="sheet">
+          <div class="sheet-tab">Vorgänge</div>
+          <N8nCard :workflows="snap.n8n_workflows" @run="runN8n" />
+        </section>
+      </div>
+
+      <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="sheet">
+          <div class="sheet-tab">Vorgang</div>
+          <ActiveJobCard :job="snap.active_job" :connected="dashboard.connected" @cancel="cancel" />
+        </section>
+        <section class="sheet">
+          <div class="sheet-tab">Warteschlange</div>
+          <QueueCard :queue="snap.queue" @cancel="cancel" />
+        </section>
+      </div>
+
+      <div class="mb-6">
+        <section class="sheet">
+          <div class="sheet-tab">Bestandsbuch</div>
+          <HistoryTable :history="snap.history" @clear="clearHistory" />
+        </section>
+      </div>
+
+      <section class="sheet">
+        <div class="sheet-tab">Protokoll</div>
+        <LiveLogConsole :logs="snap.logs" />
+      </section>
     </template>
   </div>
 </template>

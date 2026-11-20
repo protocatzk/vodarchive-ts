@@ -14,11 +14,14 @@ function label(name: string): string {
 </script>
 
 <template>
-  <div v-if="props.workflows.length > 0" class="card card-body">
-    <div class="mb-3 card-title">n8n-Workflows</div>
-    <div class="mb-4 text-xs text-text-muted">
-      Workflows laufen selbstständig: Manuell, per geplanter Zeit oder sofort ausgelöst.
+  <div v-if="props.workflows.length > 0">
+    <div class="sheet-head">
+      <div class="sheet-title">Vorgänge · n8n</div>
+      <span class="meta">Webhook-Register</span>
     </div>
+    <p class="mb-3 text-sm italic" style="color: var(--ink-soft)">
+      Auslösung eines hinterlegten Workflows – sofort, per Zeitplan oder durch das Register.
+    </p>
     <div class="flex flex-wrap items-center gap-2">
       <button
         v-for="name in props.workflows"

@@ -20,7 +20,7 @@ const newType = ref<SourceType>('rss');
 const newUrl = ref('');
 const newInterval = ref<number | ''>('');
 const adding = ref(false);
-const testResult = ref<string>('');
+const testResult = ref('');
 const testing = ref(false);
 
 onMounted(async () => {
@@ -37,7 +37,7 @@ onMounted(async () => {
 });
 
 function formatTs(ts: number | null): string {
-  if (!ts) return '-';
+  if (!ts) return '—';
   return new Date(ts * 1000).toLocaleString('de-DE', {
     day: '2-digit',
     month: '2-digit',
@@ -56,9 +56,9 @@ async function runTest(): Promise<void> {
   try {
     const result = await store.test(newType.value, newUrl.value.trim());
     testResult.value = result.ok
-      ? `OK – ${result.feeds} Feed(s), ${result.items} Item(s) gefunden.`
+      ? `OK – ${result.feeds} Zugang/Zugänge, ${result.items} Einträge gefunden.`
       : `Fehler: ${result.error ?? 'unbekannt'}`;
-    show(result.ok ? 'Quelle erreichbar.' : 'Quelle fehlgeschlagen.', result.ok ? 'success' : 'error');
+    show(result.ok ? 'Zugang erreichbar.' : 'Zugang fehlgeschlagen.', result.ok ? 'success' : 'error');
   } finally {
     testing.value = false;
   }
@@ -77,7 +77,7 @@ async function add(): Promise<void> {
       url: newUrl.value.trim(),
       pollIntervalSeconds: newInterval.value === '' ? null : Number(newInterval.value),
     });
-    show('Quelle hinzugefügt.', 'success');
+    show('Zugang eingetragen.', 'success');
     newName.value = '';
     newUrl.value = '';
     newInterval.value = '';
@@ -100,15 +100,15 @@ async function toggle(id: string, enabled: boolean): Promise<void> {
 async function check(id: string): Promise<void> {
   const status = await store.check(id);
   if (status === 'started') show('Prüfung gestartet.', 'success');
-  else if (status === 'busy') show('RSS-Prüfung läuft bereits.', 'info');
+  else if (status === 'busy') show('Prüfung läuft bereits.', 'info');
   else show(`Prüfung: ${status}`, 'error');
 }
 
 async function remove(id: string): Promise<void> {
-  if (!window.confirm('Quelle wirklich löschen?')) return;
+  if (!window.confirm('Zugang wirklich löschen?')) return;
   try {
     await store.remove(id);
-    show('Quelle gelöscht.', 'success');
+    show('Zugang gelöscht.', 'success');
   } catch (error) {
     show(errorMessage(error), 'error');
   }
@@ -116,109 +116,109 @@ async function remove(id: string): Promise<void> {
 </script>
 
 <template>
-  <div class="page">
+  <div class="folio">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
-    <h1 class="page-title mb-0">Quellen</h1>
-    <p class="page-subtitle text-xs">RSS-Feeds, OPML-Listen und yt-dlp-Kanäle – neue Quellen auf Runtime-Basis.</p>
 
-    <div class="card mb-6">
-      <div class="mb-3 card-title">Quelle hinzufügen</div>
+    <h1 class="page-title">Zugänge</h1>
+    <p class="page-subtitle">RSS-Feeds, OPML-Listen und yt-dlp-Kanäle des Archivs.</p>
+
+    <section class="sheet mb-6">
+      <div class="sheet-tab">Neuer Zugang</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Quelle hinzufügen</div>
+        <span class="meta">Zugangsverzeichnis</span>
+      </div>
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-6 lg:items-end">
-        <label class="block lg:col-span-2">
-          <span class="stat-label mb-1 block">Name</span>
+        <label class="lg:col-span-2">
+          <span class="form-label">Name</span>
           <input v-model="newName" class="input" placeholder="z. B. MontanaBlack" />
         </label>
-        <label class="block">
-          <span class="stat-label mb-1 block">Typ</span>
+        <label>
+          <span class="form-label">Typ</span>
           <select v-model="newType" class="input">
             <option value="rss">RSS</option>
             <option value="opml">OPML</option>
             <option value="ytdlp">yt-dlp (Kanal/Playlist)</option>
           </select>
         </label>
-        <label class="block lg:col-span-2">
-          <span class="stat-label mb-1 block">URL / Pfad</span>
+        <label class="lg:col-span-2">
+          <span class="form-label">URL / Pfad</span>
           <input v-model="newUrl" class="input" placeholder="https://…/feed.xml" />
         </label>
-        <label class="block">
-          <span class="stat-label mb-1 block">Intervall (s)</span>
+        <label>
+          <span class="form-label">Intervall (s)</span>
           <input v-model="newInterval" type="number" min="60" class="input" placeholder="global" />
         </label>
-        <div class="flex flex-wrap gap-2 lg:col-span-6">
+        <div class="flex flex-wrap items-center gap-2 lg:col-span-6">
           <button type="button" class="btn" :disabled="testing" @click="runTest">
-            {{ testing ? 'Teste…' : 'Testen' }}
+            {{ testing ? 'Prüfe …' : 'Prüfen' }}
           </button>
           <button type="button" class="btn btn-primary" :disabled="adding" @click="add">
-            {{ adding ? 'Füge hinzu…' : 'Hinzufügen' }}
+            {{ adding ? 'Wird eingetragen …' : 'Eintragen' }}
           </button>
-          <span v-if="testResult" class="self-center text-xs text-muted">{{ testResult }}</span>
+          <span v-if="testResult" class="meta">{{ testResult }}</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="card">
-      <div class="mb-4 flex items-center justify-between">
-        <div class="card-title">Konfigurierte Quellen</div>
-        <span class="text-xs text-muted">{{ store.sources.length }} Quelle(n)</span>
+    <section class="sheet">
+      <div class="sheet-tab">Verzeichnis</div>
+      <div class="sheet-head">
+        <div class="sheet-title">Konfigurierte Zugänge</div>
+        <span class="meta">{{ store.sources.length }} Einträge</span>
       </div>
 
-      <div v-if="store.sources.length === 0" class="py-8 text-center text-sm text-muted">
-        Noch keine Quellen. Füge oben eine RSS- oder OPML-Quelle hinzu.
+      <div v-if="store.sources.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
+        Noch keine Zugänge – trage oben eine RSS-, OPML- oder yt-dlp-Quelle ein.
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+      <div v-else class="table-wrap">
+        <table class="table">
           <thead>
-            <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
-              <th class="py-2 pr-4 font-medium">Name</th>
-              <th class="py-2 pr-4 font-medium">Typ</th>
-              <th class="py-2 pr-4 font-medium">URL</th>
-              <th class="py-2 pr-4 font-medium">Intervall</th>
-              <th class="py-2 pr-4 font-medium">Letzte Prüfung</th>
-              <th class="py-2 pr-4 font-medium">Archiviert</th>
-              <th class="py-2 font-medium">Aktionen</th>
+            <tr>
+              <th class="min-w-[11rem]">Name</th>
+              <th>Typ</th>
+              <th class="min-w-[18rem]">URL</th>
+              <th>Intervall</th>
+              <th class="min-w-[10rem]">Prüfung</th>
+              <th>Archiviert</th>
+              <th class="min-w-[16rem]">Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="source in store.sources"
-              :key="source.id"
-              class="border-b border-card-border/50 last:border-0"
-            >
-              <td class="py-3 pr-4 font-semibold text-slate-100">
-                {{ source.name }}
-                <span v-if="!source.enabled" class="ml-2 text-xs text-amber">deaktiviert</span>
+            <tr v-for="source in store.sources" :key="source.id">
+              <td>
+                <div class="font-display font-semibold">{{ source.name }}</div>
+                <div v-if="!source.enabled" class="meta" style="color: var(--oxblood)">gesperrt</div>
               </td>
-              <td class="py-3 pr-4 uppercase text-xs text-cyan">{{ source.type }}</td>
-              <td class="max-w-[22rem] truncate py-3 pr-4 text-muted" :title="source.url">
+              <td class="typewriter text-[0.62rem] uppercase" style="color: var(--brass)">{{ source.type }}</td>
+              <td class="typewriter text-[0.62rem] max-w-[22rem] truncate" style="color: var(--ink-faint)" :title="source.url">
                 {{ source.url }}
               </td>
-              <td class="py-3 pr-4">{{ source.pollIntervalSeconds ? `${source.pollIntervalSeconds}s` : 'global' }}</td>
-              <td class="py-3 pr-4">
-                <div>{{ formatTs(source.lastCheck) }}</div>
-                <div v-if="source.lastError" class="text-xs text-rose" :title="source.lastError">
+              <td class="typewriter text-xs">{{ source.pollIntervalSeconds ? `${source.pollIntervalSeconds}s` : 'global' }}</td>
+              <td>
+                <div class="typewriter text-[0.62rem]" style="color: var(--ink-faint)">{{ formatTs(source.lastCheck) }}</div>
+                <div v-if="source.lastError" class="typewriter text-[0.6rem]" style="color: var(--oxblood)" :title="source.lastError">
                   {{ source.lastError }}
                 </div>
-                <div v-else-if="source.lastOk" class="text-xs text-emerald">
-                  {{ source.lastItems }} Item(s)
+                <div v-else-if="source.lastOk" class="typewriter text-[0.6rem]" style="color: var(--sage)">
+                  {{ source.lastItems }} Einträge
                 </div>
               </td>
-              <td class="py-3 pr-4">{{ source.archivedCount }}</td>
-              <td class="py-3">
+              <td class="font-display">{{ source.archivedCount }}</td>
+              <td>
                 <div class="flex flex-wrap gap-2">
-                  <button type="button" class="btn text-xs" @click="check(source.id)">Prüfen</button>
-                  <button type="button" class="btn text-xs" @click="toggle(source.id, source.enabled)">
-                    {{ source.enabled ? 'Deaktivieren' : 'Aktivieren' }}
+                  <button type="button" class="btn" @click="check(source.id)">Prüfen</button>
+                  <button type="button" class="btn" @click="toggle(source.id, source.enabled)">
+                    {{ source.enabled ? 'Sperren' : 'Öffnen' }}
                   </button>
-                  <button type="button" class="btn btn-danger text-xs" @click="remove(source.id)">
-                    Löschen
-                  </button>
+                  <button type="button" class="btn btn-danger" @click="remove(source.id)">Löschen</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   </div>
 </template>

@@ -159,190 +159,178 @@ async function save(): Promise<void> {
 </script>
 
 <template>
-  <div class="page">
+  <div class="folio">
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
-    <h1 class="page-title mb-0">Einstellungen</h1>
-    <p class="page-subtitle text-xs mb-5">
-      Persistiert in <code class="text-slate-400">data/settings.json</code>. Änderungen gelten
-      sofort, außer Telegram-Zugangsdaten (Neustart nötig).
+    <h1 class="page-title">Ordnung</h1>
+    <p class="page-subtitle">
+      Aufzeichnung in <code class="typewriter text-xs">data/settings.json</code>. Änderungen gelten
+      sofort, nur die Telegram-Zugangsdaten benötigen einen Neustart.
     </p>
 
-    <div class="flex justify-end">
-      <button type="button" class="btn btn-primary" :disabled="store.saving || !ready" @click="save">
-        {{ store.saving ? 'Speichere…' : 'Speichern' }}
-      </button>
+    <div v-if="store.restartRequired" class="mb-4">
+      <span class="stamp stamp-brass">Neustart erforderlich</span>
+      <span class="ml-2 text-sm italic" style="color: var(--ink-soft)">Telegram-Zugangsdaten wurden geändert.</span>
     </div>
 
-    <div v-if="store.restartRequired" class="card mb-6 border-amber/40 bg-amber/10 text-amber">
-      Telegram-Zugangsdaten wurden geändert. Bitte Server/Container neu starten.
+    <div v-if="!ready" class="sheet typewriter py-12 text-center" style="color: var(--ink-soft)">
+      Lade Ordnung …
     </div>
 
-    <div v-if="!ready" class="card py-10 text-center text-muted">Lade Einstellungen…</div>
-
-    <div v-else class="space-y-6">
-      <div class="card">
-        <div class="mb-4 card-title">Telegram</div>
+    <template v-else>
+      <section class="sheet mb-6">
+        <div class="sheet-tab">Fernschreiber</div>
+        <div class="sheet-head">
+          <div class="sheet-title">Telegram</div>
+          <span class="meta">Zugang</span>
+        </div>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label class="block">
-            <span class="stat-label mb-1 block">API ID</span>
+          <label>
+            <span class="form-label">API ID</span>
             <input v-model.number="form.apiId" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">API Hash</span>
-            <input
-              v-model="form.apiHash"
-              type="password"
-              class="input"
-              :placeholder="secretSet.apiHash ? '•••••• (gesetzt, leer = beibehalten)' : 'noch nicht gesetzt'"
-            />
+          <label>
+            <span class="form-label">API Hash</span>
+            <input v-model="form.apiHash" type="password" class="input" :placeholder="secretSet.apiHash ? '•••••• (gesetzt, leer = beibehalten)' : 'noch nicht gesetzt'" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Bot Token</span>
-            <input
-              v-model="form.botToken"
-              type="password"
-              class="input"
-              :placeholder="secretSet.botToken ? '•••••• (gesetzt, leer = beibehalten)' : 'noch nicht gesetzt'"
-            />
+          <label>
+            <span class="form-label">Bot Token</span>
+            <input v-model="form.botToken" type="password" class="input" :placeholder="secretSet.botToken ? '•••••• (gesetzt, leer = beibehalten)' : 'noch nicht gesetzt'" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Chat ID</span>
+          <label>
+            <span class="form-label">Chat ID</span>
             <input v-model="form.chatId" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Forum Chat ID</span>
+          <label>
+            <span class="form-label">Forum Chat ID</span>
             <input v-model="form.forumChatId" class="input" />
           </label>
-          <label class="block md:col-span-2">
-            <span class="stat-label mb-1 block">Erlaubte Dashboard-Nutzer (kommagetrennt)</span>
+          <label class="md:col-span-2">
+            <span class="form-label">Erlaubte Leser (kommagetrennt)</span>
             <input v-model="form.allowedUsers" class="input" placeholder="@user1,@user2,123456" />
           </label>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.forwardDropAuthor" type="checkbox" class="h-4 w-4 accent-indigo-500" />
+          <label class="form-check">
+            <input v-model="form.forwardDropAuthor" type="checkbox" />
             Autor beim Weiterleiten entfernen
           </label>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <div class="mb-4 card-title">Jobs & Upload</div>
+      <section class="sheet mb-6">
+        <div class="sheet-tab">Ablauf</div>
+        <div class="sheet-head">
+          <div class="sheet-title">Vorgänge &amp; Aufteilung</div>
+          <span class="meta">Bestand</span>
+        </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.simulate" type="checkbox" class="h-4 w-4 accent-indigo-500" />
+          <label class="form-check">
+            <input v-model="form.simulate" type="checkbox" />
             Uploads simulieren
           </label>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.keepFiles" type="checkbox" class="h-4 w-4 accent-indigo-500" />
-            Temp-Dateien behalten
+          <label class="form-check">
+            <input v-model="form.keepFiles" type="checkbox" />
+            Temporäre Dateien behalten
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Parallele Upload-Worker</span>
+          <label>
+            <span class="form-label">Parallele Upload-Worker</span>
             <input v-model.number="form.parallelWorkers" type="number" min="1" max="16" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Split-Schwelle (MB)</span>
+          <label>
+            <span class="form-label">Split-Schwelle (MB)</span>
             <input v-model.number="form.splitThresholdMb" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Ziel-Teilgröße (MB)</span>
+          <label>
+            <span class="form-label">Ziel-Teilgröße (MB)</span>
             <input v-model.number="form.targetPartSizeMb" type="number" class="input" />
           </label>
-          <div class="grid grid-cols-3 gap-2 lg:col-span-3">
-            <label class="block">
-              <span class="stat-label mb-1 block">Done TTL (Tage)</span>
+          <div class="grid grid-cols-3 gap-3 lg:col-span-3">
+            <label>
+              <span class="form-label">Done TTL (Tage)</span>
               <input v-model.number="form.doneTtlDays" type="number" class="input" />
             </label>
-            <label class="block">
-              <span class="stat-label mb-1 block">Stale (Tage)</span>
+            <label>
+              <span class="form-label">Stale (Tage)</span>
               <input v-model.number="form.staleDays" type="number" class="input" />
             </label>
-            <label class="block">
-              <span class="stat-label mb-1 block">Failed TTL (Tage)</span>
+            <label>
+              <span class="form-label">Failed TTL (Tage)</span>
               <input v-model.number="form.failedTtlDays" type="number" class="input" />
             </label>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <div class="mb-4 card-title">RSS-Archiv</div>
+      <section class="sheet mb-6">
+        <div class="sheet-tab">Zugangsbuch</div>
+        <div class="sheet-head">
+          <div class="sheet-title">RSS-Archiv</div>
+          <span class="meta">rss.app</span>
+        </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.rssEnabled" type="checkbox" class="h-4 w-4 accent-indigo-500" />
-            RSS aktiv
-          </label>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.initialBackfill" type="checkbox" class="h-4 w-4 accent-indigo-500" />
-            Initial Backfill
-          </label>
-          <label class="flex items-center gap-2 text-sm text-slate-300">
-            <input v-model="form.topicPerFeed" type="checkbox" class="h-4 w-4 accent-indigo-500" />
-            Topic pro Feed
-          </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Poll-Intervall (s)</span>
+          <label class="form-check"><input v-model="form.rssEnabled" type="checkbox" /> RSS aktiv</label>
+          <label class="form-check"><input v-model="form.initialBackfill" type="checkbox" /> Initial Backfill</label>
+          <label class="form-check"><input v-model="form.topicPerFeed" type="checkbox" /> Topic pro Feed</label>
+          <label>
+            <span class="form-label">Poll-Intervall (s)</span>
             <input v-model.number="form.pollIntervalSeconds" type="number" min="60" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Max. Item-Alter (h)</span>
+          <label>
+            <span class="form-label">Max. Item-Alter (h)</span>
             <input v-model.number="form.maxItemAgeHours" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Max. Items pro Poll</span>
+          <label>
+            <span class="form-label">Max. Items pro Poll</span>
             <input v-model.number="form.maxItemsPerPoll" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Max. Retries (0 = aus)</span>
+          <label>
+            <span class="form-label">Max. Retries (0 = aus)</span>
             <input v-model.number="form.maxRetries" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Archiv Chat ID (optional)</span>
+          <label>
+            <span class="form-label">Archiv Chat ID (optional)</span>
             <input v-model="form.archiveChatId" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Archiv Forum Chat ID (optional)</span>
+          <label>
+            <span class="form-label">Archiv Forum Chat ID (optional)</span>
             <input v-model="form.archiveForumChatId" class="input" />
           </label>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <div class="mb-4 card-title">n8n</div>
+      <section class="sheet mb-6">
+        <div class="sheet-tab">n8n</div>
+        <div class="sheet-head">
+          <div class="sheet-title">Vorgangs-Registratur</div>
+          <span class="meta">API</span>
+        </div>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label class="block">
-            <span class="stat-label mb-1 block">Webhook-Timeout (s)</span>
+          <label>
+            <span class="form-label">Webhook-Timeout (s)</span>
             <input v-model.number="form.n8nTimeoutSeconds" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">Trigger-Cooldown (s)</span>
+          <label>
+            <span class="form-label">Trigger-Sperrfrist (s)</span>
             <input v-model.number="form.n8nCooldownSeconds" type="number" class="input" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">n8n API Base URL (optional)</span>
+          <label>
+            <span class="form-label">n8n API Basis-URL (optional)</span>
             <input v-model="form.n8nApiBaseUrl" class="input" placeholder="https://n8n.example.com" />
           </label>
-          <label class="block">
-            <span class="stat-label mb-1 block">n8n API Key (optional)</span>
-            <input
-              v-model="form.n8nApiKey"
-              type="password"
-              class="input"
-              :placeholder="secretSet.n8nApiKey ? '•••••• (gesetzt, leer = beibehalten)' : 'optional'"
-            />
+          <label>
+            <span class="form-label">n8n API-Schlüssel (optional)</span>
+            <input v-model="form.n8nApiKey" type="password" class="input" :placeholder="secretSet.n8nApiKey ? '•••••• (gesetzt, leer = beibehalten)' : 'optional'" />
           </label>
         </div>
-        <p class="mt-3 text-xs text-muted">
-          Workflows werden über ihre Webhook-URLs gestartet (auch zeitgesteuert unter
-          „Workflows"). Die n8n-API-Felder sind für spätere Erweiterungen vorgesehen.
+        <p class="mt-3 text-sm italic" style="color: var(--ink-soft)">
+          Ausgeführt wird über Webhook-URLs; die API-Felder dienen der Bestandsaufnahme.
         </p>
-      </div>
+      </section>
 
       <div class="flex justify-end">
         <button type="button" class="btn btn-primary" :disabled="store.saving" @click="save">
-          {{ store.saving ? 'Speichere…' : 'Speichern' }}
+          {{ store.saving ? 'Speichern …' : 'Ordnung sichern' }}
         </button>
       </div>
-    </div>
+    </template>
   </div>
 </template>
