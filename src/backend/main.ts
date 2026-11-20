@@ -19,10 +19,27 @@ function logStartup(): void {
         'Nur fuer lokale Entwicklung gedacht!',
     );
   }
-  if (!config.telegram.apiId || !config.telegram.apiHash || !config.telegram.botToken) {
+  const missingTelegram: string[] = [];
+  if (!config.telegram.apiId) missingTelegram.push('TELEGRAM_API_ID');
+  if (!config.telegram.apiHash) missingTelegram.push('TELEGRAM_API_HASH');
+  if (!config.telegram.botToken) missingTelegram.push('TELEGRAM_BOT_TOKEN');
+  if (missingTelegram.length) {
     logger.warn(
-      'TELEGRAM_API_ID / TELEGRAM_API_HASH / TELEGRAM_BOT_TOKEN nicht vollstaendig gesetzt – ' +
-        'Telegram-Uploads sind deaktiviert.',
+      `Telegram deaktiviert – fehlende Werte: ${missingTelegram.join(', ')}. ` +
+        'Dashboard-Login liefert dann 503.',
+    );
+  }
+  const missingChats: string[] = [];
+  if (!config.telegram.defaultChatId) missingChats.push('TELEGRAM_CHAT_ID');
+  if (!config.telegram.defaultForumChatId) missingChats.push('TELEGRAM_FORUM_CHAT_ID');
+  if (missingChats.length) {
+    logger.warn(
+      `Uploads benoetigen Ziel-Chats – fehlende Werte: ${missingChats.join(', ')}.`,
+    );
+  }
+  if (config.telegram.allowedDashboardUsers.length === 0) {
+    logger.warn(
+      'ALLOWED_DASHBOARD_USERS ist leer – niemand kann sich am Dashboard anmelden.',
     );
   }
   if (config.jobs.simulate) {
