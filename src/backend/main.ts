@@ -1,8 +1,10 @@
 import { config } from './config';
+import { enqueueJob } from './jobs/worker';
 import { logger } from './logger';
 import { rssArchiver } from './rss/archiver';
 import { startServer } from './server';
 import { state } from './state';
+import { GramJsTelegramGateway } from './telegram/gramjs';
 
 function logStartup(): void {
   logger.info('==============================================');
@@ -28,6 +30,49 @@ function logStartup(): void {
   }
 }
 
+async function initTelegram(): Promise<void> {
+  if (!config.telegram.apiId || !config.telegram.apiHash || !config.telegram.botToken) {
+    return;
+  }
+  const gateway = new GramJsTelegramGateway();
+  try {
+    await gateway.connect();
+    state.setGateway(gateway);
+    logger.info(`Telegram verbunden als @${state.botUsername || '?'}.`);
+  } catch (error) {
+    logger.error(`Telegram-Verbindung fehlgeschlagen: ${String(error)}`);
+  }
+}
+
+function registerRssHandler(): void {
+  rssArchiver.onItem = async (item) => {
+    const forumChatId =
+      config.rss.archiveForumChatId || config.telegram.defaultForumChatId || undefined;
+    const data: Record<string, unknown> = {
+      download_url: item.url,
+      use_ytdlp: true,
+      source: 'rss',
+      source_url: item.url,
+      recording_id: item.recordingId,
+      streamer: item.channel,
+      title: item.title,
+      thumbnail_url: item.thumbnail,
+      platform: item.platform,
+      recorded_at: item.publishedIso,
+      chat_id: config.rss.archiveChatId || config.telegram.defaultChatId,
+      forum_chat_id: forumChatId,
+      topic_name: config.rss.topicPerFeed ? item.channel : undefined,
+    };
+
+    const { record, done } = enqueueJob(data, undefined, true);
+    if (!done) return;
+    const outcome = await done;
+    if (outcome.status !== 'success') {
+      throw new Error(outcome.error || `RSS-Job ${record.job_id} ${outcome.status}`);
+    }
+  };
+}
+
 function shutdown(signal: string): void {
   if (state.shuttingDown) return;
   state.shuttingDown = true;
@@ -36,12 +81,14 @@ function shutdown(signal: string): void {
   setTimeout(() => process.exit(0), 500).unref();
 }
 
-function main(): void {
+async function main(): Promise<void> {
   logStartup();
+  registerRssHandler();
+  await initTelegram();
   rssArchiver.start();
   startServer();
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
-main();
+void main();

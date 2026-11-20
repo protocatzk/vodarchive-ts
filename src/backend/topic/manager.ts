@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { config } from '../config';
 import { logger } from '../logger';
 import type { TelegramGateway } from '../telegram/gateway';
 
@@ -10,10 +11,7 @@ import type { TelegramGateway } from '../telegram/gateway';
 
 export type TopicCache = Record<string, Record<string, number>>;
 
-export const TOPICS_CACHE_FILE = path.resolve(
-  process.cwd(),
-  process.env['TOPICS_CACHE_FILE'] || 'data/topics_cache.json',
-);
+export const TOPICS_CACHE_FILE = config.paths.topicsCacheFile;
 
 // rss.app haengt Plattform-Suffixe an Feed-Titel, z. B. "MontanaBlack - YouTube".
 const PLATFORM_SUFFIX_RE = new RegExp(

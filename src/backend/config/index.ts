@@ -30,15 +30,28 @@ function envList(name: string): string[] {
 }
 
 const cwd = process.cwd();
+const dataDir = path.resolve(cwd, envStr('DATA_DIR', 'data'));
+
+function dataPath(envName: string, filename: string): string {
+  const explicit = envStr(envName);
+  return explicit ? path.resolve(cwd, explicit) : path.join(dataDir, filename);
+}
 
 export const config = {
   isProduction: envStr('NODE_ENV', 'development') === 'production',
   port: envInt('PORT', 8080),
 
   paths: {
-    baseDir: path.resolve(cwd, envStr('DATA_DIR', 'data')),
-    topicsCacheFile: path.resolve(cwd, envStr('TOPICS_CACHE_FILE', 'data/topics_cache.json')),
-    rssStateFile: path.resolve(cwd, envStr('RSS_STATE_FILE', 'data/rss_state.json')),
+    baseDir: dataDir,
+    topicsCacheFile: dataPath('TOPICS_CACHE_FILE', 'topics_cache.json'),
+    rssStateFile: dataPath('RSS_STATE_FILE', 'rss_state.json'),
+    telegramSessionFile: dataPath('TELEGRAM_SESSION_FILE', 'telegram.session'),
+  },
+
+  media: {
+    ytdlpPath: envStr('YTDLP_PATH', 'yt-dlp'),
+    ffmpegPath: envStr('FFMPEG_PATH', 'ffmpeg'),
+    ffprobePath: envStr('FFPROBE_PATH', 'ffprobe'),
   },
 
   telegram: {
@@ -58,6 +71,7 @@ export const config = {
     ffmpegThreads: envInt('FFMPEG_THREADS', 2),
     downloadInactivityTimeout: envInt('DOWNLOAD_INACTIVITY_TIMEOUT', 120),
     downloadChunkSize: Math.max(64 * 1024, envInt('DOWNLOAD_CHUNK_SIZE', 1024 * 1024)),
+    keepFiles: envBool('KEEP_JOB_FILES', false),
   },
 
   auth: {

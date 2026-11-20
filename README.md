@@ -13,11 +13,16 @@ Referenz unter [`legacy/`](./legacy).
 | Topic-Cache + Smart-Matching + CRUD-API | ✅ portiert |
 | Vue-Dashboard (SSE-Live-Status, Jobs, Logs) | ✅ implementiert |
 | Vue-Topic-Verwaltung (Aliase, Remap, Löschen) | ✅ implementiert |
-| RSS-Status/Trigger-API + Persistenz-Gerüst | ✅ API portiert, Feed-Verarbeitung offen |
+| RSS-Feed-Verarbeitung (RSS/Atom + OPML, State, Retry) | ✅ implementiert |
 | n8n-Webhook-Trigger | ✅ portiert |
-| Upload-Pipeline | ⚠️ simuliert (`SIMULATE_JOBS=true`) |
-| Telegram MTProto (Telethon → Node) | ⏳ offen (Gateway-Interface vorbereitet) |
-| yt-dlp-Download / ffmpeg-Split / Fast-Upload | ⏳ offen |
+| Upload-Pipeline (HTTP/yt-dlp → ffmpeg-Split → Upload) | ✅ implementiert |
+| Telegram MTProto (GramJS) | ✅ implementiert |
+| Paralleler (Fast-)Upload | ✅ via GramJS `workers` |
+
+> Hinweis: Die Telegram- und Medien-Pipeline ist implementiert, benötigt aber
+> gültige Zugangsdaten sowie `ffmpeg`/`ffprobe` (und optional `yt-dlp`). Ein
+> Live-Test gegen Telegram ist in dieser Umgebung nicht möglich. Mit
+> `SIMULATE_JOBS=true` lässt sich die UI ohne externe Dienste testen.
 
 Das Backend ist so aufgebaut, dass die fehlenden Teile hinter klaren Schnittstellen
 (`src/backend/telegram/gateway.ts`, `src/backend/rss/archiver.ts`, Upload-Worker)
@@ -69,11 +74,15 @@ Die vollständige Liste steht in [`.env.example`](./.env.example).
 | `DATA_DIR` | Datenverzeichnis (Default `data`) |
 | `AUTH_DEV_MODE` | `true` = Login ohne Telegram (nur Entwicklung!) |
 | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_BOT_TOKEN` | MTProto-Zugang |
+| `TELEGRAM_SESSION_FILE` | Persistente GramJS-StringSession |
 | `TELEGRAM_FORUM_CHAT_ID` | Ziel-Forum für Topics |
-| `TOPICS_CACHE_FILE` | Pfad zum Topic-Cache (Default `data/topics_cache.json`) |
+| `TOPICS_CACHE_FILE` | Pfad zum Topic-Cache (Default `<DATA_DIR>/topics_cache.json`) |
 | `RSS_ENABLED`, `RSS_FEED_URLS`, `RSS_OPML_FILE` | RSS-Archiv |
 | `N8N_WEBHOOKS_JSON` | JSON-Map `{"name":"https://…/webhook/…"}` |
 | `SIMULATE_JOBS` | `true` = Upload-Pipeline simulieren |
+| `PARALLEL_UPLOAD_WORKERS` | Parallele Upload-Worker (GramJS) |
+| `YTDLP_PATH`, `FFMPEG_PATH`, `FFPROBE_PATH` | Pfade zu den Binaries |
+| `KEEP_JOB_FILES` | Temporäre Dateien nach Upload behalten |
 
 ## API-Endpunkte
 
@@ -100,14 +109,14 @@ src/
 ├── backend/
 │   ├── api/routes/      # auth, status, system, topics, rss, n8n, upload
 │   ├── config/          # zentrale Env-Konfiguration
-│   ├── jobs/            # persistenter Job-Store + (simulierter) Worker
+│   ├── jobs/            # Job-Store, Worker, echte Pipeline (media.ts)
 │   ├── logger/          # Logger mit In-Memory-Ringpuffer für die UI
-│   ├── rss/             # RSS-Archiv (API portiert, Verarbeitung offen)
-│   ├── telegram/        # Gateway-Interface + Platzhalter
+│   ├── rss/             # RSS/Atom+OPML-Parsing, State, Polling
+│   ├── telegram/        # Gateway-Interface, GramJS-Implementierung, Platzhalter
 │   ├── topic/           # Topic-Manager (Cache, Matching, Telegram)
-│   ├── state.ts         # Laufzeit-Zustand (Queue, History, Sessions)
+│   ├── state.ts         # Laufzeit-Zustand (Queue, History, Sessions, Waiters)
 │   ├── server.ts        # Express-App
-│   └── main.ts          # Entrypoint
+│   └── main.ts          # Entrypoint (Telegram + RSS init)
 └── frontend/
     ├── components/      # Header, Cards, Tabellen, Log-Konsole, Toasts
     ├── composables/     # useToast
@@ -118,12 +127,27 @@ src/
     └── main.ts
 ```
 
-## Nächste Schritte (Portierung)
+## Implementierungsdetails
 
-1. **Telegram-Gateway** implementieren (GramJS oder `@mtproto/core`) und in
-   `src/backend/telegram/` einsetzen, sodass `state.setGateway(...)` es aktiviert.
-2. **Upload-Worker** von Simulation auf echten Download/Split/Upload umstellen
-   (`src/backend/jobs/worker.ts`).
-3. **RSS-Verarbeitung** (Feed-Parsing, yt-dlp-Aufrufe) in `src/backend/rss/archiver.ts`
-   ergänzen.
-4. Fast-Upload (parallele MTProto-Teile) aus `legacy/fast_uploader.py` portieren.
+- **Telegram (GramJS):** `src/backend/telegram/gramjs.ts` – Bot-Login via
+  `botAuthToken`, persistente `StringSession`, Forum-Topics
+  (`channels.CreateForumTopic`), Forwarding (`messages.ForwardMessages`) und
+  Video-Upload (`sendFile` mit `topMsgId` + `workers` für parallelen Upload).
+- **Upload-Pipeline:** `src/backend/jobs/pipeline.ts` + `media.ts` – Download per
+  HTTP-Stream oder `yt-dlp`, `ffprobe`-Metadaten, `ffmpeg`-Segmentierung per
+  Stream-Copy nahe der Zielgröße, anschließender Upload in das passende Topic.
+- **RSS:** `src/backend/rss/archiver.ts` – liest `RSS_FEED_URLS` und optional
+  OPML, parst RSS/Atom, dedupliziert über einen State, filtert nach Alter und
+  reiht neue Items mit Wartezeit (`wait=true`) in die Pipeline ein; Retry mit
+  Backoff.
+
+## Bekannte Einschränkungen
+
+- **Login-Freigabe:** Der Browser-Login erzeugt Token + Deep-Link; die
+  Bestätigung per Telegram-Inline-Buttons (`/start login_<token>` + Callback)
+  ist noch nicht an das GramJS-Gateway angebunden. Bis dahin `AUTH_DEV_MODE=true`
+  nutzen oder die Session serverseitig setzen.
+- **Live-Streams:** RSS-Live-Erkennung/Re-Check ist noch nicht umgesetzt.
+- **ffmpeg-Split:** nutzt Stream-Copy; Schnittpunkte hängen von Keyframes ab.
+- **RSS-Status „archived"** bedeutet „erfolgreich in die Pipeline eingereiht und
+  Job abgeschlossen" (der Handler wartet auf das Job-Ergebnis).

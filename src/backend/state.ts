@@ -51,6 +51,15 @@ export interface HistoryItem {
   status: 'success' | 'failed' | 'cancelled';
 }
 
+export interface JobOutcome {
+  status: 'success' | 'cancelled' | 'failed';
+  error?: string;
+  topicId?: number;
+  topicName?: string;
+  parts?: number;
+  totalSizeMb?: number;
+}
+
 class RuntimeState {
   readonly startedAt = Date.now();
   gateway: TelegramGateway = new UnconfiguredTelegramGateway();
@@ -64,6 +73,7 @@ class RuntimeState {
   pendingAuth = new Map<string, PendingAuth>();
   cancelledJobs = new Set<string>();
   n8nLastTrigger: Record<string, number> = {};
+  jobWaiters = new Map<string, (outcome: JobOutcome) => void>();
 
   shuttingDown = false;
   processing = false;
@@ -111,6 +121,14 @@ class RuntimeState {
 
   isCancelled(key: string): boolean {
     return this.cancelledJobs.has(key);
+  }
+
+  resolveJob(key: string, outcome: JobOutcome): void {
+    const waiter = this.jobWaiters.get(key);
+    if (waiter) {
+      this.jobWaiters.delete(key);
+      waiter(outcome);
+    }
   }
 
   requestCancel(key: string): 'cancelled' | 'cancelling' | 'not_found' {

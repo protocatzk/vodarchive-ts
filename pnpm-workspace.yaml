@@ -1,3 +1,6 @@
 allowBuilds:
   esbuild: true
   vue-demi: true
+  bufferutil: true
+  utf-8-validate: true
+  es5-ext: true

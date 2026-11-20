@@ -27,7 +27,7 @@ uploadRouter.post('/', (req, res) => {
     return;
   }
 
-  const record = enqueueJob(data);
+  const { record } = enqueueJob(data);
   res.status(202).json({
     status: 'queued',
     key: record.key,
