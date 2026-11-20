@@ -44,7 +44,7 @@ function statusLabel(status: HistoryItem['status']): string {
         <tbody>
           <tr v-if="history.length === 0">
             <td colspan="6" class="py-10 text-center italic" style="color: var(--ink-faint)">
-              Noch keine VODs in diesem Bestand eingetragen.
+              Keine Einträge.
             </td>
           </tr>
           <tr v-for="(item, index) in history" :key="`${item.finished_at}-${index}`">

@@ -163,14 +163,8 @@ async function save(): Promise<void> {
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
     <h1 class="page-title">Ordnung</h1>
-    <p class="page-subtitle">
-      Aufzeichnung in <code class="typewriter text-xs">data/settings.json</code>. Änderungen gelten
-      sofort, nur die Telegram-Zugangsdaten benötigen einen Neustart.
-    </p>
-
     <div v-if="store.restartRequired" class="mb-4">
       <span class="stamp stamp-brass">Neustart erforderlich</span>
-      <span class="ml-2 text-sm italic" style="color: var(--ink-soft)">Telegram-Zugangsdaten wurden geändert.</span>
     </div>
 
     <div v-if="!ready" class="sheet typewriter py-12 text-center" style="color: var(--ink-soft)">
@@ -321,9 +315,6 @@ async function save(): Promise<void> {
             <input v-model="form.n8nApiKey" type="password" class="input" :placeholder="secretSet.n8nApiKey ? '•••••• (gesetzt, leer = beibehalten)' : 'optional'" />
           </label>
         </div>
-        <p class="mt-3 text-sm italic" style="color: var(--ink-soft)">
-          Ausgeführt wird über Webhook-URLs; die API-Felder dienen der Bestandsaufnahme.
-        </p>
       </section>
 
       <div class="flex justify-end">

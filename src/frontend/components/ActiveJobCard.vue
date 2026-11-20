@@ -25,9 +25,6 @@ const cancelling = computed(() => props.job?.stage === 'cancelling');
 
     <div v-if="!job" class="py-12 text-center">
       <div class="typewriter text-sm" style="color: var(--ink-soft)">Kein Vorgang in Bearbeitung.</div>
-      <div class="mt-2 text-sm italic" style="color: var(--ink-faint)">
-        Das Archiv wartet auf neue Aufnahmen aus n8n.
-      </div>
     </div>
 
     <div v-else class="job-box">

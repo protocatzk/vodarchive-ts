@@ -279,15 +279,12 @@ const executionCount = computed(() => store.executions.length);
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
     <h1 class="page-title">Vorgänge</h1>
-    <p class="page-subtitle">
-      Interne Abläufe ohne n8n – JSON-Workflows mit HTTP, Streamrecorder, Filtern und Uploads.
-    </p>
 
     <!-- Interner Ablauf -->
     <section class="sheet mb-6">
       <div class="sheet-tab">Interner Ablauf</div>
       <div class="sheet-head">
-        <div class="sheet-title">Neuer Vorgang (ohne n8n)</div>
+        <div class="sheet-title">Neuer Vorgang</div>
         <span class="meta">JSON-Workflow</span>
       </div>
 
@@ -333,10 +330,6 @@ const executionCount = computed(() => store.executions.length);
         <button type="button" class="btn btn-primary" :disabled="iAdding" @click="addInternal">
           {{ iAdding ? 'Wird angelegt …' : 'Internen Vorgang anlegen' }}
         </button>
-        <span class="meta">
-          Schritte: log · set · http.request · streamrecorder.recordings · filter · foreach ·
-          enqueue_upload · telegram.send · delay
-        </span>
       </div>
     </section>
 
@@ -345,7 +338,7 @@ const executionCount = computed(() => store.executions.length);
       <div class="sheet-tab">Extern / n8n</div>
       <div class="sheet-head">
         <div class="sheet-title">Webhook-Vorgang</div>
-        <span class="meta">Übergangslösung</span>
+        
       </div>
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5 lg:items-end">
         <label>
@@ -380,10 +373,6 @@ const executionCount = computed(() => store.executions.length);
           </button>
         </div>
       </div>
-      <p class="mb-3 text-sm italic" style="color: var(--ink-soft)">
-        Basis-URL und API-Schlüssel in der
-        <RouterLink to="/settings" class="topic-link">Ordnung</RouterLink> hinterlegen.
-      </p>
       <div v-if="store.discoverError" class="mb-3 border px-3 py-2 text-sm" style="border-color: var(--oxblood); color: var(--oxblood)">
         {{ store.discoverError }}
       </div>
@@ -423,7 +412,7 @@ const executionCount = computed(() => store.executions.length);
         </table>
       </div>
       <div v-else-if="!store.discovering && !store.discoverError" class="meta">
-        Noch kein Bestandsabgleich durchgeführt.
+        Kein Bestandsabgleich.
       </div>
     </section>
 
@@ -436,7 +425,7 @@ const executionCount = computed(() => store.executions.length);
       </div>
 
       <div v-if="store.workflows.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
-        Noch keine Vorgänge eingetragen.
+        Keine Vorgänge.
       </div>
 
       <div v-else class="table-wrap">
@@ -505,7 +494,7 @@ const executionCount = computed(() => store.executions.length);
       </div>
 
       <div v-if="store.executions.length === 0" class="py-8 text-center italic" style="color: var(--ink-faint)">
-        Noch keine Ausführungen.
+        Keine Ausführungen.
       </div>
 
       <div v-else class="space-y-2">

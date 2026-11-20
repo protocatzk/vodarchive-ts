@@ -173,9 +173,6 @@ async function remove(id: string): Promise<void> {
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
     <h1 class="page-title">Zugänge</h1>
-    <p class="page-subtitle">
-      RSS-Feeds, OPML-Listen, yt-dlp-Kanäle und Streamrecorder-Aufnahmen des Archivs.
-    </p>
 
     <section class="sheet mb-6">
       <div class="sheet-tab">Neuer Zugang</div>
@@ -281,7 +278,7 @@ async function remove(id: string): Promise<void> {
       </div>
 
       <div v-if="store.sources.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
-        Noch keine Zugänge – trage oben eine RSS-, OPML-, yt-dlp- oder Streamrecorder-Quelle ein.
+        Keine Zugänge.
       </div>
 
       <div v-else class="table-wrap">

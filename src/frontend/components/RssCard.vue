@@ -83,7 +83,7 @@ function formatTs(ts: number | null | undefined): string {
     </div>
 
     <div v-if="feeds.length === 0" class="border px-3 py-3 text-sm italic" style="border-color: var(--rule); color: var(--ink-faint)">
-      Keine Zugänge eingetragen – bitte RSS_FEED_URLS bzw. OPML-Quelle prüfen.
+      Keine Feeds.
     </div>
 
     <div v-else>

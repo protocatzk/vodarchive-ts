@@ -106,10 +106,6 @@ onBeforeUnmount(stopPolling);
 
         <hr class="rule-double" />
 
-        <p class="text-center italic" style="color: var(--ink-soft)">
-          Bitte weise dich am Lesesaal aus. Die Bestätigung erfolgt über Telegram.
-        </p>
-
         <a
           v-if="deepLink"
           :href="deepLink"

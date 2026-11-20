@@ -162,7 +162,6 @@ async function deleteTopic(topicId: number): Promise<void> {
     <AppHeader :user="auth.user || 'Admin'" :connected="dashboard.connected" />
 
     <h1 class="page-title">Register der Themen</h1>
-    <p class="page-subtitle">Zuordnung der Streamer-Aliase zu Telegram-Foren-Themen.</p>
 
     <div class="mb-6 flex flex-wrap items-center gap-3">
       <select
@@ -249,7 +248,7 @@ async function deleteTopic(topicId: number): Promise<void> {
       </div>
 
       <div v-else class="py-12 text-center italic" style="color: var(--ink-faint)">
-        {{ topics.data?.topics.length ? 'Kein Eintrag passt zur Suche.' : 'Das Register ist leer – trage oben ein Topic ein.' }}
+        {{ topics.data?.topics.length ? 'Keine Treffer.' : 'Keine Einträge.' }}
       </div>
     </section>
 

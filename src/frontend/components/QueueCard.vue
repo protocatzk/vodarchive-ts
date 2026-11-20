@@ -16,7 +16,6 @@ const emit = defineEmits<{ (e: 'cancel', key: string): void }>();
 
     <div v-if="queue.length === 0" class="py-12 text-center">
       <div class="typewriter text-sm" style="color: var(--ink-soft)">Keine wartenden Vorgänge.</div>
-      <div class="mt-2 text-sm italic" style="color: var(--ink-faint)">Das Regal ist leer.</div>
     </div>
 
     <ul v-else class="space-y-2">

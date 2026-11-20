@@ -92,7 +92,6 @@ async function runN8n(name: string): Promise<void> {
     <AppHeader :user="user" :connected="dashboard.connected" />
 
     <h1 class="page-title">Ablage</h1>
-    <p class="page-subtitle">Übersicht über Vorgänge, Register und Zugänge des Archivs.</p>
 
     <div v-if="!snap" class="sheet typewriter py-16 text-center text-[var(--ink-soft)]">
       Lade Bestandsdaten …
