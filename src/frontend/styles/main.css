@@ -105,6 +105,7 @@ body,
 /* ================================================================== */
 
 body {
+  overflow-x: hidden;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.55;
@@ -639,6 +640,7 @@ body::before {
 .table-wrap {
   overflow-x: auto;
   border-radius: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -906,3 +908,163 @@ body::before {
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 6px; }
 ::-webkit-scrollbar-track { background: var(--scroll-track); }
+
+
+/* ================================================================== */
+/* Responsive / Mobile                                                */
+/* ================================================================== */
+
+@media (max-width: 767px) {
+  .folio {
+    padding: 1.1rem 0.75rem 3rem;
+  }
+
+  .masthead {
+    padding: 1.1rem 1rem 0.8rem;
+    border-radius: 10px;
+    margin-bottom: 1.4rem;
+  }
+
+  .crest {
+    gap: 0.8rem;
+  }
+  .crest-mark {
+    height: 3.1rem;
+    width: 3.1rem;
+    border-radius: 8px;
+  }
+  .crest-mark svg {
+    height: 1.7rem;
+    width: 1.7rem;
+  }
+  .wordmark {
+    font-size: 2rem;
+  }
+  .tagline {
+    font-size: 0.95rem;
+  }
+  .eyebrow {
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+  }
+
+  .registry {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.6rem;
+    gap: 0.35rem 0.7rem;
+  }
+  .registry .stand {
+    display: none;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tab {
+    flex: none;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.62rem;
+  }
+  .tab-out {
+    margin-left: 0;
+  }
+
+  .sheet {
+    padding: 1.15rem 0.95rem 1.05rem;
+    border-radius: 10px;
+  }
+  .sheet-tab {
+    top: -1rem;
+    left: 0.8rem;
+    padding: 0.3rem 0.7rem 0.25rem;
+    font-size: 0.58rem;
+  }
+  .sheet-head {
+    margin-bottom: 1rem;
+  }
+  .sheet-title {
+    font-size: 1.15rem;
+  }
+
+  .page-title {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.7rem;
+  }
+  .index-card {
+    padding: 0.9rem 0.9rem 0.85rem;
+    border-radius: 8px;
+  }
+
+  .table th {
+    padding: 0.5rem 0.7rem 0.4rem 0;
+    font-size: 0.52rem;
+    letter-spacing: 0.1em;
+  }
+  .table td {
+    padding: 0.55rem 0.7rem 0.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  .job-box {
+    padding: 1rem 0.9rem 0.9rem 1.7rem;
+  }
+  .job-box::before {
+    left: 0.75rem;
+  }
+  .job-box::after {
+    left: calc(0.75rem - 4px);
+  }
+
+  .queue-item {
+    padding: 0.55rem 0.65rem;
+    align-items: flex-start;
+  }
+
+  .logs-console {
+    padding: 0.6rem 0.7rem;
+    font-size: 0.68rem;
+    line-height: 1.45rem;
+  }
+
+  .btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.62rem;
+  }
+  .input,
+  .select,
+  .textarea {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  .toast-area {
+    padding: 0 0.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .wordmark {
+    font-size: 1.75rem;
+  }
+  .page-title {
+    font-size: 1.6rem;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  .sheet {
+    padding: 1rem 0.8rem 0.95rem;
+  }
+}

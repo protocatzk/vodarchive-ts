@@ -52,7 +52,7 @@ async function logout(): Promise<void> {
           {{ connected ? 'verbunden' : 'offline' }}
         </span>
         <span>Leser: <strong>{{ user || 'Gast' }}</strong></span>
-        <span>Stand: <strong>{{ stand }}</strong></span>
+        <span class="stand">Stand: <strong>{{ stand }}</strong></span>
       </div>
     </div>
 

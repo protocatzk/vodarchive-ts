@@ -80,7 +80,7 @@ onBeforeUnmount(stopPolling);
 </script>
 
 <template>
-  <div class="fixed inset-0 z-10 flex items-center justify-center px-4 py-10">
+  <div class="fixed inset-0 z-10 overflow-y-auto px-4 py-10">
     <button
       type="button"
       class="cabinet-ghost absolute right-5 top-5"
@@ -88,8 +88,8 @@ onBeforeUnmount(stopPolling);
     >
       {{ theme === 'dark' ? '☀ Tag' : '☾ Nacht' }}
     </button>
-    <div class="w-full max-w-md">
-      <div class="sheet" style="padding: 2rem 1.8rem">
+    <div class="mx-auto flex min-h-full w-full max-w-md items-center">
+      <div class="sheet w-full" style="padding: 2rem 1.8rem">
         <div class="text-center">
           <div class="crest-mark mx-auto" aria-hidden="true">
             <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.1">
