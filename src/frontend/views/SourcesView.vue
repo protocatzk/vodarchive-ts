@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '../components/AppHeader.vue';
 import { useAuthStore } from '../stores/auth';
@@ -7,7 +7,7 @@ import { useDashboardStore } from '../stores/dashboard';
 import { useSourcesStore } from '../stores/sources';
 import { useToast } from '../composables/useToast';
 import { errorMessage } from '../lib/api';
-import type { SourceType } from '../types';
+import type { Source, SourceType } from '../types';
 
 const auth = useAuthStore();
 const dashboard = useDashboardStore();
@@ -54,6 +54,87 @@ const previewLoading = ref(false);
 const previewName = ref('');
 const previewInfo = ref('');
 const previewItems = ref<PreviewItem[]>([]);
+
+const editing = ref<Source | null>(null);
+const savingEdit = ref(false);
+const editForm = reactive({
+  name: '',
+  url: '',
+  enabled: true,
+  pollIntervalSeconds: '' as number | '',
+  cookie: '',
+  apiBaseUrl: '',
+  listPath: '',
+  limit: 10,
+  targets: '',
+  initialBackfill: false,
+  onlyNew: true,
+  dryRun: false,
+  testMode: false,
+  testChatId: '',
+  testForumChatId: '',
+});
+
+function openEdit(source: Source): void {
+  editing.value = source;
+  editForm.name = source.name;
+  editForm.url = source.url;
+  editForm.enabled = source.enabled;
+  editForm.pollIntervalSeconds = source.pollIntervalSeconds ?? '';
+  editForm.cookie = '';
+  editForm.apiBaseUrl = source.apiBaseUrl ?? '';
+  editForm.listPath = source.listPath ?? '/api/user/recordingsv2';
+  editForm.limit = source.limit ?? 10;
+  editForm.targets = (source.targets ?? []).join(', ');
+  editForm.initialBackfill = Boolean(source.initialBackfill);
+  editForm.onlyNew = source.onlyNew !== false;
+  editForm.dryRun = Boolean(source.dryRun);
+  editForm.testMode = Boolean(source.testMode);
+  editForm.testChatId = source.testChatId ?? '';
+  editForm.testForumChatId = source.testForumChatId ?? '';
+}
+
+function closeEdit(): void {
+  editing.value = null;
+  editForm.cookie = '';
+}
+
+async function saveEdit(): Promise<void> {
+  if (!editing.value) return;
+  const patch: Record<string, unknown> = {
+    name: editForm.name.trim(),
+    url: editForm.url.trim(),
+    enabled: editForm.enabled,
+    pollIntervalSeconds:
+      editForm.pollIntervalSeconds === '' ? null : Number(editForm.pollIntervalSeconds),
+  };
+  if (editing.value.type === 'streamrecorder') {
+    if (editForm.cookie.trim()) patch.cookie = editForm.cookie.trim();
+    patch.apiBaseUrl = editForm.apiBaseUrl.trim();
+    patch.listPath = editForm.listPath.trim();
+    patch.limit = Number(editForm.limit) || 10;
+    patch.targets = editForm.targets
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    patch.initialBackfill = editForm.initialBackfill;
+    patch.onlyNew = editForm.onlyNew;
+    patch.dryRun = editForm.dryRun;
+    patch.testMode = editForm.testMode;
+    patch.testChatId = editForm.testChatId.trim();
+    patch.testForumChatId = editForm.testForumChatId.trim();
+  }
+  savingEdit.value = true;
+  try {
+    await store.update(editing.value.id, patch);
+    show('Zugang gespeichert.', 'success');
+    closeEdit();
+  } catch (error) {
+    show(errorMessage(error), 'error');
+  } finally {
+    savingEdit.value = false;
+  }
+}
 
 const isStreamrecorder = computed(() => newType.value === 'streamrecorder');
 
@@ -396,6 +477,7 @@ async function remove(id: string): Promise<void> {
                     Vorschau
                   </button>
                   <button type="button" class="btn" @click="check(source.id)">Prüfen</button>
+                  <button type="button" class="btn" @click="openEdit(source)">Bearbeiten</button>
                   <button type="button" class="btn" @click="toggle(source.id, source.enabled)">
                     {{ source.enabled ? 'Sperren' : 'Öffnen' }}
                   </button>
@@ -407,6 +489,94 @@ async function remove(id: string): Promise<void> {
         </table>
       </div>
     </section>
+
+    <div
+      v-if="editing"
+      class="fixed inset-0 z-40 flex items-center justify-center p-4"
+      style="background: rgba(42, 35, 24, 0.55)"
+      @click.self="closeEdit"
+    >
+      <div class="sheet w-full max-w-3xl" style="max-height: 90vh; overflow-y: auto">
+        <div class="sheet-head">
+          <div class="sheet-title">Zugang bearbeiten</div>
+          <button type="button" class="btn btn-ghost" @click="closeEdit">✕</button>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <label>
+            <span class="form-label">Name</span>
+            <input v-model="editForm.name" class="input" />
+          </label>
+          <label>
+            <span class="form-label">{{ editing.type === 'streamrecorder' ? 'API-Basis' : 'URL / Pfad' }}</span>
+            <input v-model="editForm.url" class="input" />
+          </label>
+          <label>
+            <span class="form-label">Intervall (s)</span>
+            <input v-model="editForm.pollIntervalSeconds" type="number" min="60" class="input" placeholder="global" />
+          </label>
+          <label class="form-check self-end">
+            <input v-model="editForm.enabled" type="checkbox" />
+            Aktiv
+          </label>
+        </div>
+
+        <template v-if="editing.type === 'streamrecorder'">
+          <hr class="rule" />
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label class="md:col-span-2">
+              <span class="form-label">Streamrecorder-Cookie (leer = beibehalten)</span>
+              <input v-model="editForm.cookie" type="password" class="input" placeholder="nicht ändern" />
+            </label>
+            <label>
+              <span class="form-label">Targets (kommagetrennt)</span>
+              <input v-model="editForm.targets" class="input" placeholder="alle" />
+            </label>
+            <label>
+              <span class="form-label">Limit / Target</span>
+              <input v-model="editForm.limit" type="number" min="1" max="100" class="input" />
+            </label>
+            <label class="form-check">
+              <input v-model="editForm.onlyNew" type="checkbox" />
+              Nur neue (nicht heruntergeladene)
+            </label>
+            <label class="form-check">
+              <input v-model="editForm.initialBackfill" type="checkbox" />
+              Bestand beim ersten Lauf übernehmen
+            </label>
+            <label class="form-check">
+              <input v-model="editForm.dryRun" type="checkbox" />
+              Trockenlauf (nur loggen)
+            </label>
+            <label class="form-check">
+              <input v-model="editForm.testMode" type="checkbox" />
+              Test-Upload (ohne downloaded-Markierung)
+            </label>
+            <template v-if="editForm.testMode">
+              <label>
+                <span class="form-label">Test-Chat-ID (optional)</span>
+                <input v-model="editForm.testChatId" class="input" placeholder="Standard-Chat" />
+              </label>
+              <label>
+                <span class="form-label">Test-Forum-ID (optional)</span>
+                <input v-model="editForm.testForumChatId" class="input" placeholder="Standard-Forum" />
+              </label>
+            </template>
+            <label class="md:col-span-2">
+              <span class="form-label">Listen-Pfad</span>
+              <input v-model="editForm.listPath" class="input" />
+            </label>
+          </div>
+        </template>
+
+        <div class="mt-4 flex justify-end gap-2">
+          <button type="button" class="btn" @click="closeEdit">Abbrechen</button>
+          <button type="button" class="btn btn-primary" :disabled="savingEdit" @click="saveEdit">
+            {{ savingEdit ? 'Speichern …' : 'Speichern' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div
       v-if="previewOpen"
