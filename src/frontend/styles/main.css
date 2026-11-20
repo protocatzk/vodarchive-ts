@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  @apply bg-bg text-slate-100 font-sans antialiased;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 40%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 40%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-card-border bg-card p-5 backdrop-blur;
+  }
+
+  .card-title {
+    @apply text-sm font-semibold tracking-wide text-slate-200;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-card-border px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-gradient-to-br from-primary to-cyan text-white shadow-brand-glow hover:opacity-90;
+  }
+
+  .btn-danger {
+    @apply border-rose/40 bg-rose/10 text-rose hover:bg-rose/20;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full border border-card-border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide;
+  }
+
+  .badge-live {
+    @apply border-emerald/40 bg-emerald/10 text-emerald;
+  }
+
+  .badge-idle {
+    @apply border-slate-600/50 bg-slate-700/30 text-slate-300;
+  }
+
+  .stat-label {
+    @apply text-xs uppercase tracking-wider text-muted;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold text-white;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-card-border bg-slate-900/60 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-primary/70 focus:ring-2 focus:ring-primary/20;
+  }
+}
+
+.logs-console {
+  @apply max-h-72 overflow-y-auto rounded-lg bg-black/50 p-3 font-mono text-xs leading-relaxed;
+}
+
+.log-line {
+  @apply whitespace-pre-wrap break-words;
+}
+
+.log-time {
+  @apply text-slate-500;
+}
+
+.log-info {
+  @apply text-cyan;
+}
+
+.log-warning {
+  @apply text-amber;
+}
+
+.log-error {
+  @apply text-rose;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
