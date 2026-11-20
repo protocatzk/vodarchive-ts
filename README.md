@@ -60,9 +60,30 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-- Port: `8080`
-- Persistente Daten: `./data` (Job-Store, Topic-Cache, RSS-State)
-- Multi-Stage-Build mit pnpm, Runtime auf `node:20-alpine`
+- Der Container lauscht intern auf `8080`, wird aber nur auf
+  `127.0.0.1:8081` veröffentlicht (für einen Reverse-Proxy davor).
+- Persistente Daten: `./data` (Job-Store, Topic-Cache, RSS-State, Telegram-Session)
+- Multi-Stage-Build mit pnpm, Runtime auf `node:20-alpine` inkl. `ffmpeg`/`yt-dlp`
+
+### Öffentlich erreichbar via Caddy
+
+`deploy/Caddyfile.example` enthält den passenden Site-Block:
+
+```caddyfile
+upload.positronium.dev {
+    encode zstd gzip
+    log
+    reverse_proxy 127.0.0.1:8081 {
+        flush_interval -1
+    }
+}
+```
+
+- In `/etc/caddy/Caddyfile` einfügen, `caddy validate` und Caddy neu starten.
+- Caddy holt automatisch ein Let's-Encrypt-Zertifikat (DNS muss auf den Server zeigen).
+- `flush_interval -1` hält den SSE-Live-Stream offen.
+- Bei `NODE_ENV=production` wird das Session-Cookie nur über HTTPS gesetzt – passt
+  zum Caddy-Setup. Für lokale HTTP-Tests `NODE_ENV=development` verwenden.
 
 ## Umgebungsvariablen (Auszug)
 

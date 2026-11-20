@@ -1,0 +1,18 @@
+# Beispiel: Caddy als Reverse-Proxy vor dem Docker-Container.
+# Der Container wird in docker-compose.yml nur auf 127.0.0.1:8081 veroeffentlicht.
+# Caddy uebernimmt TLS (Let's Encrypt) und HTTP->HTTPS.
+#
+# Voraussetzungen:
+#   - DNS A/AAAA fuer upload.positronium.dev zeigt auf diesen Server
+#   - Ports 80/443 erreichbar
+#   - Caddy laeuft auf dem Host (systemd) oder als eigener Container
+
+upload.positronium.dev {
+	encode zstd gzip
+	log
+
+	# flush_interval -1 ist wichtig fuer den SSE-Live-Stream (/voduploader/api/events).
+	reverse_proxy 127.0.0.1:8081 {
+		flush_interval -1
+	}
+}
