@@ -41,10 +41,11 @@ Auslösen eigener Webhooks (manuell oder zeitgesteuert) ist damit unproblematisc
 
 Die Oberfläche ist als „Archivraum" aufgebaut:
 
-- **Papier & Tinte**: Parchment-Hintergrund mit Faser-/Alterungstextur, Tinte `#2a2318`, Oxblood `#8a2f2b`, Messing `#9a7426`
+- **Aktenschrank**: Metallschrank mit Schubladenfugen, Messinggriffen und Vignette als Seitenhintergrund
+- **Papier & Tinte**: Papierbögen mit Faser-/Alterungstextur, Tinte `#2a2318`, Oxblood `#8a2f2b`, Messing `#b98d33`
 - **Typografie**: Playfair Display (Titel), EB Garamond (Fließtext), Special Elite (Schreibmaschinen-Metadaten, Stempel)
-- **Struktur**: Masthead mit Wappen und „Stand"-Vermerk, Aktenreiter als Navigation, jede Sektion als Aktenblatt (`sheet`) mit Reiter
-- **Bestandteile**: Karteikarten für Kennzahlen, Vorgangsbogen mit roter Aktenrandlinie und gestempelter Fortschrittsleiste, Bestandsbuch als liniertes Register, Stempel (Archiviert/In Arbeit/Fehler), Zugangsbuch für RSS, Schreibmaschinen-Protokoll
+- **Struktur**: Masthead als Papierbogen mit Wappen, „Stand"-Vermerk und Reiternavigation; jede Sektion als abgerundetes Aktenblatt mit Reiter
+- **Bestandteile**: Karteikarten für Kennzahlen, Vorgangsbogen mit roter Aktenrandlinie, Bestandsbuch als Register, Stempel (Archiviert/In Arbeit/Fehler), Zugangsbuch für RSS, Schreibmaschinen-Protokoll
 - **Login**: Lesesaal-Ausweis (Zutrittskarte)
 
 Das Backend ist so aufgebaut, dass die fehlenden Teile hinter klaren Schnittstellen
