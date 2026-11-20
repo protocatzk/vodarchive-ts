@@ -243,6 +243,10 @@ src/
 - **Job-History:** `src/backend/history/store.ts` – `data/history.json` (0600),
   beim Start in den Laufzeit-State geladen, beim Abschluss persistiert und über
   die UI leerbar.
+- **Live-Updates:** `GET /voduploader/api/events` (SSE) sendet alle 1,5 s einen
+  Gesamtstatus inkl. Quellen, Workflows und den letzten Ausführungen. Die
+  Verbindung bleibt beim Seitenwechsel bestehen; Dashboard, Zugänge, Vorgänge,
+  Register und Ordnung aktualisieren sich damit in Echtzeit.
 - **Dashboard-Login:** `GET /voduploader/api/auth/request` erzeugt ein Token und
   einen Deep-Link `https://t.me/<bot>?start=login_<token>`. Der Bot-Handler
   (`startAuthFlow` im GramJS-Gateway) prüft den Absender gegen

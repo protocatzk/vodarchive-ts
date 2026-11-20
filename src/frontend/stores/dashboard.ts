@@ -56,6 +56,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     };
   }
 
+  function ensureConnected(): void {
+    if (!source) connect();
+  }
+
   function disconnect(): void {
     disposed = true;
     if (retryTimer) clearTimeout(retryTimer);
@@ -126,6 +130,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loading,
     fetchStatus,
     connect,
+    ensureConnected,
     disconnect,
     cancelJob,
     clearHistory,

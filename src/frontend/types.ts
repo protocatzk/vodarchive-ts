@@ -82,6 +82,9 @@ export interface Snapshot {
   logs: LogLine[];
   rss: RssStatus;
   n8n_workflows: string[];
+  sources: Source[];
+  workflows: Workflow[];
+  executions: ExecutionRecord[];
 }
 
 export interface TopicRow {
@@ -207,6 +210,7 @@ export interface Workflow {
   lastHttpStatus: number | null;
   lastError: string | null;
   runCount: number;
+  trigger?: { type: 'manual' | 'schedule'; intervalSeconds?: number } | null;
 }
 
 export interface ExecutionStepLog {

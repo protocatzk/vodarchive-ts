@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '../components/AppHeader.vue';
 import StatsGrid from '../components/StatsGrid.vue';
@@ -31,7 +31,6 @@ onMounted(async () => {
   dashboard.connect();
 });
 
-onUnmounted(() => dashboard.disconnect());
 
 async function cancel(key: string): Promise<void> {
   if (!key) return;

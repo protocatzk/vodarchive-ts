@@ -40,6 +40,7 @@ onMounted(async () => {
     router.push('/login');
     return;
   }
+  dashboard.ensureConnected();
   try {
     await topics.load();
   } catch (error) {

@@ -34,6 +34,9 @@ const runningId = ref('');
 const expandedExec = ref<string | null>(null);
 const selectedSource = ref('');
 const srSources = computed(() => sourcesStore.sources.filter((source) => source.type === 'streamrecorder'));
+const liveWorkflows = computed(() => dashboard.snapshot?.workflows ?? store.workflows);
+const liveExecutions = computed(() => dashboard.snapshot?.executions ?? store.executions);
+const executionCount = computed(() => liveExecutions.value.length);
 
 const TEMPLATE: WorkflowDefinition = {
   trigger: { type: 'manual' },
@@ -85,6 +88,7 @@ onMounted(async () => {
     router.push('/login');
     return;
   }
+  dashboard.ensureConnected();
   try {
     await sourcesStore.load().catch(() => undefined);
     const firstSource = srSources.value[0];
@@ -231,7 +235,7 @@ async function discover(): Promise<void> {
 }
 
 function isImported(workflow: { name: string; webhookUrl: string | null }): boolean {
-  return store.workflows.some(
+  return liveWorkflows.value.some(
     (local) =>
       local.name === workflow.name ||
       (workflow.webhookUrl !== null && local.webhookUrl === workflow.webhookUrl),
@@ -271,7 +275,6 @@ async function clearExecutions(): Promise<void> {
   }
 }
 
-const executionCount = computed(() => store.executions.length);
 </script>
 
 <template>
@@ -421,10 +424,10 @@ const executionCount = computed(() => store.executions.length);
       <div class="sheet-tab">Bestand</div>
       <div class="sheet-head">
         <div class="sheet-title">Konfigurierte Vorgänge</div>
-        <span class="meta">{{ store.workflows.length }} Einträge</span>
+        <span class="meta">{{ liveWorkflows.length }} Einträge</span>
       </div>
 
-      <div v-if="store.workflows.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
+      <div v-if="liveWorkflows.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
         Keine Vorgänge.
       </div>
 
@@ -442,7 +445,7 @@ const executionCount = computed(() => store.executions.length);
             </tr>
           </thead>
           <tbody>
-            <tr v-for="workflow in store.workflows" :key="workflow.id">
+            <tr v-for="workflow in liveWorkflows" :key="workflow.id">
               <td>
                 <div class="font-display font-semibold">{{ workflow.name }}</div>
                 <div v-if="!workflow.enabled" class="meta" style="color: var(--oxblood)">gesperrt</div>
@@ -451,7 +454,7 @@ const executionCount = computed(() => store.executions.length);
                 <span class="chip">{{ workflow.kind === 'internal' ? 'intern' : 'webhook' }}</span>
               </td>
               <td class="typewriter text-xs">
-                {{ workflow.definition ? triggerLabel(workflow.definition.trigger) : workflow.intervalSeconds ? `alle ${workflow.intervalSeconds}s` : 'manuell' }}
+                {{ workflow.definition ? triggerLabel(workflow.definition.trigger) : workflow.trigger ? triggerLabel(workflow.trigger) : workflow.intervalSeconds ? `alle ${workflow.intervalSeconds}s` : 'manuell' }}
               </td>
               <td class="typewriter text-xs">{{ formatTs(workflow.lastRun) }}</td>
               <td>
@@ -493,12 +496,12 @@ const executionCount = computed(() => store.executions.length);
         </div>
       </div>
 
-      <div v-if="store.executions.length === 0" class="py-8 text-center italic" style="color: var(--ink-faint)">
+      <div v-if="liveExecutions.length === 0" class="py-8 text-center italic" style="color: var(--ink-faint)">
         Keine Ausführungen.
       </div>
 
       <div v-else class="space-y-2">
-        <div v-for="exec in store.executions" :key="exec.id" class="queue-item !items-start">
+        <div v-for="exec in liveExecutions" :key="exec.id" class="queue-item !items-start">
           <div class="min-w-0 flex-1">
             <button type="button" class="flex w-full flex-wrap items-baseline justify-between gap-2 text-left" @click="toggleExec(exec.id)">
               <span class="font-display font-semibold">{{ exec.workflowName }}</span>

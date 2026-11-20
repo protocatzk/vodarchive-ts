@@ -142,6 +142,7 @@ async function saveEdit(): Promise<void> {
 }
 
 const isStreamrecorder = computed(() => newType.value === 'streamrecorder');
+const liveSources = computed(() => dashboard.snapshot?.sources ?? store.sources);
 
 onMounted(async () => {
   const authed = await auth.fetchSession();
@@ -149,6 +150,7 @@ onMounted(async () => {
     router.push('/login');
     return;
   }
+  dashboard.ensureConnected();
   try {
     await store.load();
   } catch (error) {
@@ -445,10 +447,10 @@ async function remove(id: string): Promise<void> {
       <div class="sheet-tab">Verzeichnis</div>
       <div class="sheet-head">
         <div class="sheet-title">Konfigurierte Zugänge</div>
-        <span class="meta">{{ store.sources.length }} Einträge</span>
+        <span class="meta">{{ liveSources.length }} Einträge</span>
       </div>
 
-      <div v-if="store.sources.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
+      <div v-if="liveSources.length === 0" class="py-12 text-center italic" style="color: var(--ink-faint)">
         Keine Zugänge.
       </div>
 
@@ -466,7 +468,7 @@ async function remove(id: string): Promise<void> {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="source in store.sources" :key="source.id">
+            <tr v-for="source in liveSources" :key="source.id">
               <td>
                 <div class="font-display font-semibold">{{ source.name }}</div>
                 <div class="flex flex-wrap gap-1">
