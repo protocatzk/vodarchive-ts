@@ -83,6 +83,7 @@ function registerRssHandler(): void {
       chat_id: settings.rss.archiveChatId || settings.telegram.chatId,
       forum_chat_id: forumChatId,
       topic_name: settings.rss.topicPerFeed ? item.channel : undefined,
+      ...(item.extra ?? {}),
     };
 
     const { record, done } = enqueueJob(data, undefined, true);

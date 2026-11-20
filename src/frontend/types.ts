@@ -146,7 +146,7 @@ export interface MaskedSettings {
   };
 }
 
-export type SourceType = 'rss' | 'opml' | 'ytdlp';
+export type SourceType = 'rss' | 'opml' | 'ytdlp' | 'streamrecorder';
 
 export interface Source {
   id: string;
@@ -161,6 +161,15 @@ export interface Source {
   lastError: string | null;
   lastItems: number;
   archivedCount: number;
+  cookieSet?: boolean;
+  apiBaseUrl?: string;
+  listPath?: string;
+  limit?: number;
+  itemsPath?: string;
+  targets?: string[];
+  fieldMap?: Record<string, string>;
+  initialBackfill?: boolean;
+  onlyNew?: boolean;
 }
 
 export type WorkflowStatus = 'ok' | 'failed' | 'timeout' | 'cooldown';

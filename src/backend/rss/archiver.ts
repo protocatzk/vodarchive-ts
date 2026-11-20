@@ -7,6 +7,7 @@ import { runProcess } from '../jobs/media';
 import { logger } from '../logger';
 import { settingsStore } from '../settings/store';
 import { sourceStore, type Source } from '../sources/store';
+import { fetchStreamrecorder } from '../sources/streamrecorder';
 
 /**
  * RSS-Archiv: liest Quellen aus dem persistenten SourceStore (RSS oder OPML),
@@ -23,6 +24,8 @@ export interface RssItem {
   platform: string;
   recordingId: string;
   publishedIso: string;
+  /** Zusatzfelder für die Upload-Pipeline (z. B. Streamrecorder). */
+  extra?: Record<string, unknown>;
 }
 
 export type RssItemStatus = 'archived' | 'skipped' | 'failed' | 'retry' | 'live' | 'baseline';
@@ -454,6 +457,51 @@ export class RssArchiver {
         },
       ];
     }
+    if (source.type === 'streamrecorder') {
+      const result = await fetchStreamrecorder(source);
+      const items: RssItem[] = result.items.map((recording) => ({
+        key: `sr-${recording.recordingId}`,
+        channel: recording.streamer,
+        title: recording.title,
+        url: recording.url,
+        published: recording.published,
+        thumbnail: recording.thumbnail,
+        platform: recording.platform,
+        recordingId: recording.recordingId,
+        publishedIso: isoDate(recording.published),
+        extra: {
+          source: 'streamrecorder',
+          use_ytdlp: false,
+          download_url: recording.url,
+          source_url: recording.url,
+          recording_id: recording.recordingId,
+          streamer: recording.streamer,
+          title: recording.title,
+          duration: recording.duration,
+          filesize_mb: recording.filesizeMb,
+          resolution: recording.resolution,
+          thumbnail_url: recording.thumbnail,
+          platform: recording.platform,
+          category: recording.category,
+          max_viewers: recording.maxViewers,
+          avg_viewers: recording.avgViewers,
+          deletion_time: recording.deletionTime,
+          player_url: recording.playerUrl,
+          recorded_at: recording.recordedAt,
+          cookie: source.cookie ?? '',
+          api_base_url: source.apiBaseUrl ?? '',
+          target_id: recording.targetId,
+          topic_name: recording.streamer,
+        },
+      }));
+      return [
+        {
+          feedKey: source.url || source.apiBaseUrl || source.name,
+          feedTitle: source.name,
+          items,
+        },
+      ];
+    }
     const feeds = await this.expandOpml(source);
     const entries: ItemEntry[] = [];
     for (const feed of feeds) {
@@ -724,6 +772,7 @@ export class RssArchiver {
       for (const source of selected) {
         try {
           const entries = await this.collectItems(source);
+          const backfill = source.initialBackfill ?? settings.initialBackfill;
           let sourceItems = 0;
           for (const entry of entries) {
             sourceItems += entry.items.length;
@@ -738,7 +787,7 @@ export class RssArchiver {
             for (const item of entry.items) {
               if (this.state.items[item.key]) continue;
 
-              if (firstSeen && trigger !== 'backfill' && !settings.initialBackfill) {
+              if (firstSeen && trigger !== 'backfill' && !backfill) {
                 this.state.items[item.key] = { s: 'baseline', t: at };
                 continue;
               }

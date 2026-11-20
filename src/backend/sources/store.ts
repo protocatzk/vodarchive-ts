@@ -5,7 +5,7 @@ import { config } from '../config';
 import { logger } from '../logger';
 import { readJsonFile, writeJsonFileAtomic } from '../util/json';
 
-export type SourceType = 'rss' | 'opml' | 'ytdlp';
+export type SourceType = 'rss' | 'opml' | 'ytdlp' | 'streamrecorder';
 
 export interface Source {
   id: string;
@@ -20,6 +20,25 @@ export interface Source {
   lastError: string | null;
   lastItems: number;
   archivedCount: number;
+  /** Streamrecorder: Session-Cookie (nie in API-Antworten ausgeliefert). */
+  cookie?: string;
+  cookieSet?: boolean;
+  /** Streamrecorder: Basis-URL der API. */
+  apiBaseUrl?: string;
+  /** Streamrecorder: Listen-Endpunkt (Default /api/user/recordingsv2). */
+  listPath?: string;
+  /** Streamrecorder: Anzahl der zu ladenden Aufnahmen pro Target. */
+  limit?: number;
+  /** Streamrecorder: Pfad zum Array in der Antwort (leer = auto). */
+  itemsPath?: string;
+  /** Streamrecorder: optionale Ziel-/Kanal-Filter. */
+  targets?: string[];
+  /** Streamrecorder: Mapping logischer Felder auf Antwort-Felder. */
+  fieldMap?: Record<string, string>;
+  /** Streamrecorder: beim ersten Lauf vorhandene Aufnahmen überspringen. */
+  initialBackfill?: boolean;
+  /** Streamrecorder: nur nicht heruntergeladene Aufnahmen übernehmen. */
+  onlyNew?: boolean;
 }
 
 export interface SourceInput {
@@ -28,6 +47,15 @@ export interface SourceInput {
   url?: unknown;
   enabled?: unknown;
   pollIntervalSeconds?: unknown;
+  cookie?: unknown;
+  apiBaseUrl?: unknown;
+  listPath?: unknown;
+  limit?: unknown;
+  itemsPath?: unknown;
+  targets?: unknown;
+  fieldMap?: unknown;
+  initialBackfill?: unknown;
+  onlyNew?: unknown;
 }
 
 function nowSeconds(): number {
@@ -44,8 +72,8 @@ function hostOf(url: string): string {
 
 function sanitizeType(value: unknown): SourceType {
   const type = String(value ?? '').trim().toLowerCase();
-  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp') {
-    throw new Error("Typ muss 'rss', 'opml' oder 'ytdlp' sein.");
+  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp' && type !== 'streamrecorder') {
+    throw new Error("Typ muss 'rss', 'opml', 'ytdlp' oder 'streamrecorder' sein.");
   }
   return type;
 }
@@ -62,6 +90,33 @@ function sanitizeInterval(value: unknown): number | null {
   const parsed = Number.parseInt(String(value), 10);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Math.max(60, Math.min(86400, parsed));
+}
+
+function toBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
+  return fallback;
+}
+
+function toList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((entry) => String(entry).trim()).filter(Boolean);
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function toFieldMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const result: Record<string, string> = {};
+  for (const [key, mapped] of Object.entries(value as Record<string, unknown>)) {
+    const text = String(mapped ?? '').trim();
+    if (text) result[key] = text;
+  }
+  return result;
 }
 
 export class SourceStore {
@@ -123,22 +178,39 @@ export class SourceStore {
     }
   }
 
+  private mask(source: Source): Source {
+    const copy = { ...source };
+    copy.cookieSet = Boolean(copy.cookie);
+    copy.cookie = '';
+    return copy;
+  }
+
   list(): Source[] {
-    return this.data.map((source) => ({ ...source }));
+    return this.data.map((source) => this.mask(source));
   }
 
-  get(id: string): Source | null {
-    const source = this.data.find((entry) => entry.id === id);
-    return source ? { ...source } : null;
-  }
-
+  /** Interne Sicht inkl. Cookie – nur für den Archiver. */
   listEnabled(): Source[] {
     return this.data.filter((source) => source.enabled).map((source) => ({ ...source }));
   }
 
+  get(id: string): Source | null {
+    const source = this.data.find((entry) => entry.id === id);
+    return source ? this.mask(source) : null;
+  }
+
+  getInternal(id: string): Source | null {
+    const source = this.data.find((entry) => entry.id === id);
+    return source ? { ...source } : null;
+  }
+
   add(input: SourceInput): Source {
     const type = sanitizeType(input.type);
-    const url = sanitizeUrl(input.url);
+    let rawUrl = String(input.url ?? '').trim();
+    if (type === 'streamrecorder' && !rawUrl) {
+      rawUrl = String(input.apiBaseUrl ?? config.streamrecorder.apiBaseUrl).trim();
+    }
+    const url = sanitizeUrl(rawUrl);
     const name = String(input.name ?? '').trim() || hostOf(url) || url;
     const source: Source = {
       id: crypto.randomUUID(),
@@ -154,9 +226,24 @@ export class SourceStore {
       lastItems: 0,
       archivedCount: 0,
     };
+
+    if (type === 'streamrecorder') {
+      source.cookie = String(input.cookie ?? config.streamrecorder.cookie ?? '').trim();
+      source.apiBaseUrl = String(
+        input.apiBaseUrl ?? rawUrl ?? config.streamrecorder.apiBaseUrl,
+      ).trim();
+      source.listPath = String(input.listPath ?? '/api/user/recordingsv2').trim();
+      source.limit = Math.max(1, Math.min(100, Number(input.limit ?? 10) || 10));
+      source.itemsPath = String(input.itemsPath ?? '').trim();
+      source.targets = toList(input.targets);
+      source.fieldMap = toFieldMap(input.fieldMap);
+      source.initialBackfill = toBool(input.initialBackfill, false);
+      source.onlyNew = toBool(input.onlyNew, true);
+    }
+
     this.data.push(source);
     this.persist();
-    return { ...source };
+    return this.mask(source);
   }
 
   update(id: string, input: SourceInput): Source {
@@ -173,8 +260,32 @@ export class SourceStore {
     if (input.pollIntervalSeconds !== undefined) {
       source.pollIntervalSeconds = sanitizeInterval(input.pollIntervalSeconds);
     }
+
+    if (source.type === 'streamrecorder') {
+      // Leeres Cookie = bestehendes beibehalten.
+      if (input.cookie !== undefined && input.cookie !== null && input.cookie !== '') {
+        source.cookie = String(input.cookie).trim();
+      }
+      if (input.apiBaseUrl !== undefined) {
+        source.apiBaseUrl = String(input.apiBaseUrl).trim() || config.streamrecorder.apiBaseUrl;
+      }
+      if (input.listPath !== undefined) {
+        source.listPath = String(input.listPath).trim() || '/api/user/recordingsv2';
+      }
+      if (input.limit !== undefined) {
+        source.limit = Math.max(1, Math.min(100, Number(input.limit) || 10));
+      }
+      if (input.itemsPath !== undefined) source.itemsPath = String(input.itemsPath).trim();
+      if (input.targets !== undefined) source.targets = toList(input.targets);
+      if (input.fieldMap !== undefined) source.fieldMap = toFieldMap(input.fieldMap);
+      if (input.initialBackfill !== undefined) {
+        source.initialBackfill = toBool(input.initialBackfill, false);
+      }
+      if (input.onlyNew !== undefined) source.onlyNew = toBool(input.onlyNew, true);
+    }
+
     this.persist();
-    return { ...source };
+    return this.mask(source);
   }
 
   remove(id: string): boolean {
@@ -206,7 +317,10 @@ export class SourceStore {
   }
 
   configured(): boolean {
-    return config.rss.feedUrls.length > 0 || Boolean(config.rss.opmlFile && fs.existsSync(config.rss.opmlFile));
+    return (
+      config.rss.feedUrls.length > 0 ||
+      Boolean(config.rss.opmlFile && fs.existsSync(config.rss.opmlFile))
+    );
   }
 }
 

@@ -23,6 +23,7 @@ Referenz unter [`legacy/`](./legacy).
 | n8n-Workflow-Scheduler (autonome Ausführung) | ✅ implementiert |
 | n8n-API-Discovery/-Verwaltung | ✅ implementiert |
 | yt-dlp-Discovery für Kanäle/Playlists | ✅ implementiert |
+| Streamrecorder als native Quelle (ersetzt n8n-Workflows) | ✅ implementiert |
 | Persistente Job-History (`data/history.json`) | ✅ implementiert |
 
 > Hinweis: Die Medien-Pipeline benötigt `ffmpeg`/`ffprobe` (und `yt-dlp` für
@@ -214,6 +215,12 @@ src/
 - **Quellen:** `src/backend/sources/store.ts` – `data/sources.json`, CRUD,
   Aktivierung, optionales Intervall pro Quelle; OPML-Quellen werden beim Poll
   in einzelne Feeds expandiert.
+- **Streamrecorder (native):** `src/backend/sources/streamrecorder.ts` – liest
+  die Targets aus `/userrecordings` (HTML), holt Aufnahmen über
+  `/api/user/recordingsv2` (Filter `status=finished`, `downloaded=false`) und
+  übergibt sie der Upload-Pipeline. Nach Erfolg wird
+  `/api/user/setdownloaded` aufgerufen. Cookie wird nur serverseitig gehalten
+  und in der API maskiert. Damit sind die bisherigen n8n-Workflows ersetzt.
 - **n8n-Workflows:** `src/backend/workflows/store.ts` + `runner.ts` –
   `data/workflows.json`, manuelles und zeitgesteuertes Auslösen der Webhooks
   (Scheduler-Tick alle 15 s, Cooldown, Timeout, Statushistorie). Der alte
@@ -254,3 +261,6 @@ src/
 - **Job-History:** maximal 500 Einträge; ältere werden verworfen.
 - **Telegram-Zugangsdaten** aus den Einstellungen greifen erst nach einem
   Neustart (die MTProto-Verbindung wird beim Start aufgebaut).
+- **Streamrecorder:** Der Session-Cookie läuft irgendwann ab und muss in der
+  Quelle erneuert werden. Die alten n8n-Exporte enthielten echte Cookies/JWTs –
+  bitte nach dem Umstieg die Streamrecorder-Session rotieren.

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { rssArchiver } from '../../rss/archiver';
 import { sourceStore } from '../../sources/store';
+import { previewStreamrecorder } from '../../sources/streamrecorder';
 import { requireAuth } from '../middleware/auth';
 
 export const sourcesRouter = Router();
@@ -13,16 +14,46 @@ sourcesRouter.get('/', (_req, res) => {
 sourcesRouter.post('/test', async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const type = String(body['type'] ?? 'rss').toLowerCase();
-  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp') {
-    res.status(400).json({ error: "Typ muss 'rss', 'opml' oder 'ytdlp' sein." });
+  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp' && type !== 'streamrecorder') {
+    res.status(400).json({ error: "Typ muss 'rss', 'opml', 'ytdlp' oder 'streamrecorder' sein." });
     return;
   }
   const url = String(body['url'] ?? '').trim();
+
+  if (type === 'streamrecorder') {
+    const targetsRaw = body['targets'];
+    const targets = Array.isArray(targetsRaw)
+      ? targetsRaw.map((entry) => String(entry))
+      : String(targetsRaw ?? '')
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+    const result = await previewStreamrecorder({
+      apiBaseUrl: String(body['apiBaseUrl'] ?? url).trim() || undefined,
+      cookie: String(body['cookie'] ?? '').trim() || undefined,
+      listPath: String(body['listPath'] ?? '').trim() || undefined,
+      itemsPath: String(body['itemsPath'] ?? '').trim() || undefined,
+      targets,
+      onlyNew: body['onlyNew'] !== false,
+      limit: Number(body['limit'] ?? 10) || 10,
+    });
+    res.status(result.ok ? 200 : 400).json({
+      ok: result.ok,
+      feeds: 1,
+      items: result.items,
+      total: result.total,
+      targets: result.targets,
+      sample: result.sample,
+      ...(result.error ? { error: result.error } : {}),
+    });
+    return;
+  }
+
   if (!url) {
     res.status(400).json({ error: 'URL darf nicht leer sein.' });
     return;
   }
-  const result = await rssArchiver.preview(type, url);
+  const result = await rssArchiver.preview(type as 'rss' | 'opml' | 'ytdlp', url);
   res.status(result.ok ? 200 : 400).json(result);
 });
 

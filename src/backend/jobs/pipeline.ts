@@ -16,6 +16,38 @@ export class CancelledError extends Error {
   }
 }
 
+/** Markiert eine Streamrecorder-Aufnahme nach erfolgreichem Upload als heruntergeladen. */
+async function markStreamrecorderDownloaded(payload: Record<string, unknown>): Promise<void> {
+  const source = str(payload, ['source']);
+  const recordingId = str(payload, ['recording_id']);
+  if (source === 'rss' || !recordingId) return;
+  const cookie = str(payload, ['cookie']) || config.streamrecorder.cookie;
+  if (!cookie) return;
+
+  const base = (str(payload, ['api_base_url']) || config.streamrecorder.apiBaseUrl).replace(/\/+$/, '');
+  const url = `${base}/api/user/setdownloaded?fileid=${encodeURIComponent(recordingId)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Cookie: cookie,
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+      },
+    });
+    const body = await response.text().catch(() => '');
+    logger.info(
+      `Streamrecorder als heruntergeladen markiert: ${recordingId} (HTTP ${response.status}${body ? `: ${body.slice(0, 80)}` : ''}).`,
+    );
+  } catch (error) {
+    logger.warn(`Streamrecorder-Markierung fehlgeschlagen für ${recordingId}: ${String(error)}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface PipelineResult {
   status: 'success' | 'cancelled' | 'failed';
   error?: string;
@@ -197,6 +229,8 @@ export async function runUploadPipeline(
     }
 
     updateActive({ pct: 100 });
+
+    await markStreamrecorderDownloaded(payload);
 
     if (!settingsStore.get().jobs.keepFiles) {
       for (const file of [sourceFile, ...extraFiles]) {

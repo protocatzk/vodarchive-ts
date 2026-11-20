@@ -1,0 +1,478 @@
+{
+  "name": "Streamrecorder Auto-Downloader - Ripperchieff (API-Targets)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "be120546-a249-4cae-9cc3-564fa3e88a7c",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configure target streamers and Streamrecorder session cookie here\nconst streamrecorderCookie = "<redacted-session-cookie>";\n\n// TargetIDs werden bei jedem Lauf live aus https://streamrecorder.io/userrecordings gelesen.\nreturn [{ json: { cookie: streamrecorderCookie, limit: 10 } }];\n"
+      },
+      "id": "6ac935ee-2830-4187-a2d4-16f4ded2e2dd",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "70dd97ef-84ed-48d9-bd11-d2860ad14221",
+      "name": "Loop Streamers",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://streamrecorder.io/api/user/recordingsv2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "targetid",
+              "value": "={{ $json.target_id }}"
+            },
+            {
+              "name": "offset",
+              "value": "0"
+            },
+            {
+              "name": "limit",
+              "value": "={{ $json.limit }}"
+            },
+            {
+              "name": "sortby",
+              "value": "id"
+            },
+            {
+              "name": "sortdir",
+              "value": "desc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Referer",
+              "value": "https://streamrecorder.io/userrecordings"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4fa74416-6c92-4d06-acb2-0f93da53ec90",
+      "name": "Get Recordings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.data || []).filter(item => item.status === 'finished' && item.downloaded === 'false' && item.sources && item.sources.length > 0).length }}",
+              "operator": {
+                "operation": "gt",
+                "type": "number"
+              },
+              "rightValue": 0
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          }
+        },
+        "options": {}
+      },
+      "id": "d1c04168-a5a6-4f92-ae3f-999e93accdfe",
+      "name": "Has New Videos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1344,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst items = response.data || [];\nconst currentTarget = $('Loop Streamers').first().json;\nconst finishedVideos = [];\n\nfor (const item of items) {\n  if (item.status === 'finished' && item.downloaded === 'false' && item.sources && item.sources.length > 0) {\n    const bestSource = item.sources[0];\n    finishedVideos.push({\n      json: {\n        recording_id: item.id,\n        recorded_file_id: bestSource.recordedfileid,\n        streamer: item.target_name,\n        target_id: item.targetid,\n        title: item.streamtitle || 'No Title',\n        recorded_at: item.recorded_at,\n        duration: item.duration_hr,\n        filesize_mb: Math.round((bestSource.filesize || 0) / 1024 / 1024),\n        resolution: bestSource.resolution,\n        download_url: bestSource.downloadlink,\n        thumbnail_url: item.thumb_large || item.poster_small_270 || '',\n        platform: item.target_platform || 'tiktok',\n        category: item.streamcategory || '',\n        max_viewers: item.max_viewercount || 0,\n        avg_viewers: item.avg_viewercount || 0,\n        deletion_time: bestSource.deletiontime_hr || '',\n        player_url: item.token ? ('https://streamrecorder.io/userrecordings/recording/' + item.token) : '',\n        cookie: currentTarget.cookie\n      }\n    });\n  }\n}\n\nreturn finishedVideos;"
+      },
+      "id": "d290efa9-06fa-48cd-a9c7-67b9d1c38298",
+      "name": "Extract Finished Videos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://vod_uploader:8080/upload",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "download_url",
+              "value": "={{ $json.download_url }}"
+            },
+            {
+              "name": "chat_id",
+              "value": "-1003708809644"
+            },
+            {
+              "name": "streamer",
+              "value": "={{ $json.streamer }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "duration",
+              "value": "={{ $json.duration }}"
+            },
+            {
+              "name": "filesize_mb",
+              "value": "={{ $json.filesize_mb }}"
+            },
+            {
+              "name": "recording_id",
+              "value": "={{ $json.recording_id }}"
+            },
+            {
+              "name": "thumbnail_url",
+              "value": "={{ $json.thumbnail_url }}"
+            },
+            {
+              "name": "platform",
+              "value": "={{ $json.platform }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $json.category }}"
+            },
+            {
+              "name": "max_viewers",
+              "value": "={{ $json.max_viewers }}"
+            },
+            {
+              "name": "avg_viewers",
+              "value": "={{ $json.avg_viewers }}"
+            },
+            {
+              "name": "deletion_time",
+              "value": "={{ $json.deletion_time }}"
+            },
+            {
+              "name": "player_url",
+              "value": "={{ $json.player_url }}"
+            },
+            {
+              "name": "cookie",
+              "value": "={{ $json.cookie }}"
+            },
+            {
+              "name": "recorded_at",
+              "value": "={{ $json.recorded_at }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 7200000
+        }
+      },
+      "id": "02e95caf-0266-493f-a7fd-43a5fe4690c7",
+      "name": "Upload to Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { status: 'continue' } }];"
+      },
+      "id": "1f930809-afbc-43c3-8587-cf1da27f3745",
+      "name": "Next Streamer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://streamrecorder.io/userrecordings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Cookie",
+              "value": "={{ $json.cookie }}"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            },
+            {
+              "name": "Referer",
+              "value": "https://streamrecorder.io/userrecordings"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "202306ef-90f2-4899-8b30-e317009e4092",
+      "name": "Get Streamrecorder Targets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        144
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Configuration').first().json;\nconst res = $input.first().json;\nconst html = typeof res.data === 'string' ? res.data : (typeof res.body === 'string' ? res.body : '');\n\nif (!html) throw new Error('Streamrecorder: leere Antwort von /userrecordings');\n\nif (!html.includes('recordings-streamer-card')) {\n  if (/\\/_af\\/login|\\/login\\b/.test(html)) {\n    throw new Error('Streamrecorder: Login-Seite statt Aufnahmen - Session-Cookie abgelaufen?');\n  }\n  throw new Error('Streamrecorder: Target-Liste nicht gefunden (Cookie ungueltig oder Seitenlayout geaendert?)');\n}\n\nconst items = [];\nconst seen = new Set();\n\nfor (const chunk of html.split('<div class=\"recordings-streamer-card\"').slice(1)) {\n  const end = chunk.indexOf('>');\n  const tag = end >= 0 ? chunk.slice(0, end) : chunk.slice(0, 1200);\n  const idMatch = /id=\"target-(\\d+)\"/.exec(tag);\n  if (!idMatch || seen.has(idMatch[1])) continue;\n  seen.add(idMatch[1]);\n  const nameMatch = /data-sr-target=\"([^\"]*)\"/.exec(tag);\n  const platformMatch = /data-sr-target-platform=\"([^\"]*)\"/.exec(tag);\n  items.push({\n    json: {\n      target_id: idMatch[1],\n      target_name: nameMatch ? nameMatch[1] : '',\n      platform: platformMatch ? platformMatch[1] : '',\n      cookie: cfg.cookie,\n      limit: cfg.limit || 10,\n    },\n  });\n}\n\nif (items.length === 0) throw new Error('Streamrecorder: keine TargetIDs auf /userrecordings gefunden');\n\nreturn items;"
+      },
+      "id": "422aac63-68c7-4bca-8bbc-8c0ca1d5bad5",
+      "name": "Extract Targets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vod-ripperchieff",
+        "options": {}
+      },
+      "id": "67b54cfb-f0cb-4451-83b2-1baa271a72bc",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        336
+      ],
+      "webhookId": "6f051dbf-aef0-4b16-969d-3dd52dd40941"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Streamers": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get Recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recordings": {
+      "main": [
+        [
+          {
+            "node": "Has New Videos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New Videos?": {
+      "main": [
+        [
+          {
+            "node": "Extract Finished Videos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Next Streamer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Finished Videos": {
+      "main": [
+        [
+          {
+            "node": "Upload to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Next Streamer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next Streamer": {
+      "main": [
+        [
+          {
+            "node": "Loop Streamers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Get Streamrecorder Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Streamrecorder Targets": {
+      "main": [
+        [
+          {
+            "node": "Extract Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Targets": {
+      "main": [
+        [
+          {
+            "node": "Loop Streamers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "versionId": "dc7a2942-7036-40e8-98a0-6a7c4002fc3f",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "b7025ea29b41774092a7cff74af734901ce7e8c9bd0380dd0a0624d4a1412bc8"
+  },
+  "nodeGroups": [],
+  "id": "QwW7sd95ADD6IIoL",
+  "tags": []
+}

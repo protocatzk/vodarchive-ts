@@ -34,6 +34,14 @@ export const useSourcesStore = defineStore('sources', () => {
     type: SourceType;
     url: string;
     pollIntervalSeconds?: number | null;
+    cookie?: string;
+    apiBaseUrl?: string;
+    listPath?: string;
+    limit?: number;
+    itemsPath?: string;
+    targets?: string[];
+    initialBackfill?: boolean;
+    onlyNew?: boolean;
   }): Promise<void> {
     await api.post(endpoints.sources(), input);
     await load();
@@ -58,9 +66,15 @@ export const useSourcesStore = defineStore('sources', () => {
     }
   }
 
-  async function test(type: SourceType, url: string): Promise<SourceTestResult> {
+  async function test(
+    type: SourceType,
+    url: string,
+    extra: Record<string, unknown> = {},
+  ): Promise<SourceTestResult & { total?: number; targets?: number; sample?: Record<string, unknown> | null }> {
     try {
-      const { data } = await api.post<SourceTestResult>(endpoints.sourceTest(), { type, url });
+      const { data } = await api.post<
+        SourceTestResult & { total?: number; targets?: number; sample?: Record<string, unknown> | null }
+      >(endpoints.sourceTest(), { type, url, ...extra });
       return data;
     } catch (err) {
       return { ok: false, feeds: 0, items: 0, error: errorMessage(err, 'Test fehlgeschlagen') };

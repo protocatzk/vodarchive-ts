@@ -123,6 +123,12 @@ export const config = {
     format: envStr('YTDLP_FORMAT'),
   },
 
+  streamrecorder: {
+    apiBaseUrl: envStr('STREAMRECORDER_API_BASE', 'https://streamrecorder.io').replace(/\/+$/, ''),
+    cookie: envStr('STREAMRECORDER_COOKIE'),
+    pollIntervalSeconds: envInt('STREAMRECORDER_POLL_INTERVAL_SECONDS', 900),
+  },
+
   n8n: {
     webhooks: parseWebhooks(envStr('N8N_WEBHOOKS_JSON')),
     timeoutSeconds: envInt('N8N_WEBHOOK_TIMEOUT', 20),

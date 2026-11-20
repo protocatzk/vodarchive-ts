@@ -8,3 +8,6 @@ data/
 *.session
 *.session-journal
 legacy/**/__pycache__/
+
+# Workflow-Exporte enthalten echte Cookies/JWTs – nur lokal halten
+legacy/workflows/*.json
