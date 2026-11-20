@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppHeader from '../components/AppHeader.vue';
 import { useAuthStore } from '../stores/auth';
@@ -23,6 +23,7 @@ const editingId = ref<number | null>(null);
 const editTopicId = ref('');
 const aliasName = ref('');
 const savingEdit = ref(false);
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
 
 const editingTopic = computed(() =>
   (topics.data?.topics ?? []).find((topic) => topic.topic_id === editingId.value) ?? null,
@@ -46,6 +47,15 @@ onMounted(async () => {
   } catch (error) {
     show(errorMessage(error, 'Topics konnten nicht geladen werden'), 'error');
   }
+  refreshTimer = setInterval(() => {
+    if (editingId.value !== null) return;
+    void topics.load(topics.data?.chat_id).catch(() => undefined);
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = null;
 });
 
 async function onChatChange(event: Event): Promise<void> {
