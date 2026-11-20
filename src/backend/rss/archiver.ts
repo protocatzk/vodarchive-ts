@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { config } from '../config';
+import { runProcess } from '../jobs/media';
 import { logger } from '../logger';
 import { settingsStore } from '../settings/store';
 import { sourceStore, type Source } from '../sources/store';
@@ -52,6 +53,12 @@ interface FeedRuntime {
   ok: boolean | null;
   error: string | null;
   items: number;
+}
+
+interface ItemEntry {
+  feedKey: string;
+  feedTitle: string;
+  items: RssItem[];
 }
 
 const EMPTY_STATE: RssState = { feeds: {}, items: {}, seen_feeds: {} };
@@ -133,6 +140,16 @@ function platformFromHost(url: string): string {
   if (host.includes('rumble')) return 'rumble';
   if (host.includes('odysee')) return 'odysee';
   return 'rss';
+}
+
+function parseUploadDate(value: unknown): number | null {
+  const text = String(value ?? '').trim();
+  if (!/^\d{8}$/.test(text)) return null;
+  const year = Number(text.slice(0, 4));
+  const month = Number(text.slice(4, 6));
+  const day = Number(text.slice(6, 8));
+  const ms = Date.UTC(year, month - 1, day);
+  return Number.isNaN(ms) ? null : ms / 1000;
 }
 
 export class RssArchiver {
@@ -349,13 +366,17 @@ export class RssArchiver {
 
   /** Prueft eine Quelle ohne sie zu speichern (fuer die UI). */
   async preview(
-    type: 'rss' | 'opml',
+    type: 'rss' | 'opml' | 'ytdlp',
     url: string,
   ): Promise<{ ok: boolean; feeds: number; items: number; error?: string }> {
     try {
       if (type === 'rss') {
         const xml = await this.fetchText(url);
         const items = this.parseItems('preview', xml);
+        return { ok: true, feeds: 1, items: items.length };
+      }
+      if (type === 'ytdlp') {
+        const items = await this.discoverYtDlp(url, 'preview');
         return { ok: true, feeds: 1, items: items.length };
       }
       const xml = await this.fetchText(url);
@@ -392,10 +413,7 @@ export class RssArchiver {
     }
   }
 
-  private async expandSource(source: Source): Promise<Array<{ title: string; url: string }>> {
-    if (source.type === 'rss') {
-      return [{ title: source.name, url: source.url }];
-    }
+  private async expandOpml(source: Source): Promise<Array<{ title: string; url: string }>> {
     const xml = await this.fetchText(source.url);
     const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
     const doc = parser.parse(xml) as Record<string, unknown>;
@@ -413,6 +431,110 @@ export class RssArchiver {
     }
     if (feeds.length === 0) throw new Error('OPML enthält keine Feeds.');
     return feeds;
+  }
+
+  /** Liefert alle Items einer Quelle (RSS: ein Feed, OPML: mehrere, yt-dlp: Discovery). */
+  private async collectItems(source: Source): Promise<ItemEntry[]> {
+    if (source.type === 'rss') {
+      const xml = await this.fetchText(source.url);
+      return [
+        {
+          feedKey: source.url,
+          feedTitle: source.name,
+          items: this.parseItems(source.name, xml),
+        },
+      ];
+    }
+    if (source.type === 'ytdlp') {
+      return [
+        {
+          feedKey: source.url,
+          feedTitle: source.name,
+          items: await this.discoverYtDlp(source.url, source.name),
+        },
+      ];
+    }
+    const feeds = await this.expandOpml(source);
+    const entries: ItemEntry[] = [];
+    for (const feed of feeds) {
+      const xml = await this.fetchText(feed.url);
+      entries.push({
+        feedKey: feed.url,
+        feedTitle: feed.title,
+        items: this.parseItems(feed.title, xml),
+      });
+    }
+    return entries;
+  }
+
+  /** Ermittelt neue Videos eines Kanals/Playlists ohne Download (yt-dlp flat playlist). */
+  private async discoverYtDlp(url: string, name: string): Promise<RssItem[]> {
+    const settings = settingsStore.get().rss;
+    const limit = Math.min(50, Math.max(10, settings.maxItemsPerPoll * 2));
+    const args = [
+      '--flat-playlist',
+      '--dump-json',
+      '--no-warnings',
+      '--ignore-errors',
+      '--playlist-end',
+      String(limit),
+      ...(config.ytdlp.cookiesFile ? ['--cookies', config.ytdlp.cookiesFile] : []),
+      ...(config.ytdlp.proxy ? ['--proxy', config.ytdlp.proxy] : []),
+      url,
+    ];
+
+    let output = '';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
+    try {
+      await runProcess(config.media.ytdlpPath, args, {
+        signal: controller.signal,
+        onStdout: (line) => {
+          output += `${line}\n`;
+        },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const items: RssItem[] = [];
+    for (const line of output.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        continue;
+      }
+      const id = String(data['id'] ?? '').trim();
+      const webpage = String(data['webpage_url'] ?? '').trim();
+      const fallback = id ? `https://www.youtube.com/watch?v=${id}` : '';
+      const videoUrl = webpage || String(data['url'] ?? '').trim() || fallback;
+      if (!videoUrl) continue;
+
+      const publishedRaw = data['timestamp'] ?? data['release_timestamp'];
+      const published =
+        typeof publishedRaw === 'number' ? publishedRaw : parseUploadDate(data['upload_date']);
+      const thumbs = Array.isArray(data['thumbnails'])
+        ? (data['thumbnails'] as Array<Record<string, unknown>>)
+        : [];
+      const lastThumb = thumbs.length ? String(thumbs[thumbs.length - 1]?.['url'] ?? '') : '';
+      const thumbnail = String(data['thumbnail'] ?? '').trim() || lastThumb || null;
+      const key = makeItemKey(videoUrl);
+
+      items.push({
+        key,
+        channel: String(data['channel'] ?? data['uploader'] ?? name),
+        title: String(data['title'] ?? videoUrl),
+        url: videoUrl,
+        published,
+        thumbnail,
+        platform: platformFromHost(videoUrl),
+        recordingId: `yt-${id || key.slice(0, 10)}`,
+        publishedIso: isoDate(published),
+      });
+    }
+    return items;
   }
 
   private parseItems(feedTitle: string, xml: string): RssItem[] {
@@ -601,17 +723,19 @@ export class RssArchiver {
 
       for (const source of selected) {
         try {
-          const feeds = await this.expandSource(source);
+          const entries = await this.collectItems(source);
           let sourceItems = 0;
-          for (const feed of feeds) {
-            const xml = await this.fetchText(feed.url);
-            const items = this.parseItems(feed.title, xml);
-            sourceItems += items.length;
-            const firstSeen = !this.state.seen_feeds[feed.url];
+          for (const entry of entries) {
+            sourceItems += entry.items.length;
+            const firstSeen = !this.state.seen_feeds[entry.feedKey];
             const at = nowSeconds();
-            this.recordFeed(feed, source, { ok: true, error: null, items: items.length, at });
+            this.recordFeed(
+              { title: entry.feedTitle, url: entry.feedKey },
+              source,
+              { ok: true, error: null, items: entry.items.length, at },
+            );
 
-            for (const item of items) {
+            for (const item of entry.items) {
               if (this.state.items[item.key]) continue;
 
               if (firstSeen && trigger !== 'backfill' && !settings.initialBackfill) {
@@ -634,13 +758,13 @@ export class RssArchiver {
               if (archivedAsRss) {
                 archived += 1;
                 sourceStore.incrementArchived(source.id);
-                logger.info(`RSS: '${item.channel}' – '${item.title}' eingereiht.`);
+                logger.info(`Quelle '${source.name}': '${item.channel}' – '${item.title}' eingereiht.`);
               } else {
                 failed += 1;
               }
             }
 
-            if (firstSeen) this.state.seen_feeds[feed.url] = true;
+            if (firstSeen) this.state.seen_feeds[entry.feedKey] = true;
           }
           sourceStore.markChecked(source.id, { ok: true, items: sourceItems });
         } catch (error) {

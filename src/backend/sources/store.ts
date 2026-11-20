@@ -5,7 +5,7 @@ import { config } from '../config';
 import { logger } from '../logger';
 import { readJsonFile, writeJsonFileAtomic } from '../util/json';
 
-export type SourceType = 'rss' | 'opml';
+export type SourceType = 'rss' | 'opml' | 'ytdlp';
 
 export interface Source {
   id: string;
@@ -44,8 +44,8 @@ function hostOf(url: string): string {
 
 function sanitizeType(value: unknown): SourceType {
   const type = String(value ?? '').trim().toLowerCase();
-  if (type !== 'rss' && type !== 'opml') {
-    throw new Error("Typ muss 'rss' oder 'opml' sein.");
+  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp') {
+    throw new Error("Typ muss 'rss', 'opml' oder 'ytdlp' sein.");
   }
   return type;
 }

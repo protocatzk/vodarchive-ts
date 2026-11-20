@@ -69,6 +69,16 @@ async function resetRss(): Promise<void> {
   }
 }
 
+async function clearHistory(): Promise<void> {
+  if (!window.confirm('Verlauf wirklich leeren? Die Einträge werden dauerhaft gelöscht.')) return;
+  try {
+    const removed = await dashboard.clearHistory();
+    show(`${removed} Eintrag/Einträge gelöscht.`, 'success');
+  } catch (error) {
+    show((error as Error).message, 'error');
+  }
+}
+
 async function runN8n(name: string): Promise<void> {
   const status = await dashboard.triggerN8n(name);
   if (status === 'started') show(`n8n-Workflow '${name}' gestartet.`, 'success');
@@ -100,7 +110,7 @@ async function runN8n(name: string): Promise<void> {
           <QueueCard :queue="snap.queue" @cancel="cancel" />
         </div>
 
-        <HistoryTable :history="snap.history" />
+        <HistoryTable :history="snap.history" @clear="clearHistory" />
         <LiveLogConsole :logs="snap.logs" />
       </div>
     </template>

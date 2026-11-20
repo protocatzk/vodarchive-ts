@@ -146,7 +146,7 @@ export interface MaskedSettings {
   };
 }
 
-export type SourceType = 'rss' | 'opml';
+export type SourceType = 'rss' | 'opml' | 'ytdlp';
 
 export interface Source {
   id: string;
@@ -177,5 +177,15 @@ export interface Workflow {
   lastHttpStatus: number | null;
   lastError: string | null;
   runCount: number;
+}
+
+export interface N8nDiscoveredWorkflow {
+  id: string;
+  name: string;
+  active: boolean;
+  webhookPath: string | null;
+  webhookUrl: string | null;
+  updatedAt: string | null;
+  tags: string[];
 }
 

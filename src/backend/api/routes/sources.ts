@@ -13,8 +13,8 @@ sourcesRouter.get('/', (_req, res) => {
 sourcesRouter.post('/test', async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const type = String(body['type'] ?? 'rss').toLowerCase();
-  if (type !== 'rss' && type !== 'opml') {
-    res.status(400).json({ error: "Typ muss 'rss' oder 'opml' sein." });
+  if (type !== 'rss' && type !== 'opml' && type !== 'ytdlp') {
+    res.status(400).json({ error: "Typ muss 'rss', 'opml' oder 'ytdlp' sein." });
     return;
   }
   const url = String(body['url'] ?? '').trim();

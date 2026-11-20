@@ -2,6 +2,7 @@
 import type { HistoryItem } from '../types';
 
 defineProps<{ history: HistoryItem[] }>();
+const emit = defineEmits<{ (e: 'clear'): void }>();
 
 function statusClass(status: HistoryItem['status']): string {
   if (status === 'success') return 'text-emerald';
@@ -18,9 +19,19 @@ function statusLabel(status: HistoryItem['status']): string {
 
 <template>
   <div class="card">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex items-center justify-between gap-3">
       <div class="card-title">Kürzlich archivierte VODs</div>
-      <span class="text-xs text-muted">{{ history.length }} Einträge</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-muted">{{ history.length }} Einträge</span>
+        <button
+          type="button"
+          class="btn text-xs"
+          :disabled="history.length === 0"
+          @click="emit('clear')"
+        >
+          Verlauf leeren
+        </button>
+      </div>
     </div>
 
     <div class="overflow-x-auto">

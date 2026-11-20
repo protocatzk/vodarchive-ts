@@ -138,6 +138,7 @@ async function remove(id: string): Promise<void> {
           <select v-model="newType" class="input">
             <option value="rss">RSS</option>
             <option value="opml">OPML</option>
+            <option value="ytdlp">yt-dlp (Kanal/Playlist)</option>
           </select>
         </label>
         <label class="block lg:col-span-2">

@@ -17,8 +17,7 @@ function resolveJobKey(keyRaw: string | null, jobIdRaw: string | null): string |
   return pending ? pending.key : null;
 }
 
-systemRouter.post('/jobs/cancel', requireAuth, (req, res) => {
-  const body = (req.body ?? {}) as Record<string, unknown>;
+systemRouter.post('/jobs/cancel', requireAuth, (req, res) => {  const body = (req.body ?? {}) as Record<string, unknown>;
   const key = resolveJobKey(
     String(body['key'] ?? '').trim() || null,
     String(body['job_id'] ?? '').trim() || null,
@@ -33,6 +32,11 @@ systemRouter.post('/jobs/cancel', requireAuth, (req, res) => {
     return;
   }
   res.status(202).json({ status: result, key });
+});
+
+systemRouter.delete('/history', requireAuth, (_req, res) => {
+  const removed = state.clearHistory();
+  res.json({ status: 'ok', removed });
 });
 
 export function healthHandler(_req: Request, res: Response): void {

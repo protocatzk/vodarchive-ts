@@ -19,8 +19,11 @@ Referenz unter [`legacy/`](./legacy).
 | Telegram MTProto (GramJS) | ✅ implementiert |
 | Paralleler (Fast-)Upload | ✅ via GramJS `workers` |
 | Persistente Einstellungen (`data/settings.json` + UI) | ✅ implementiert |
-| Quellenverwaltung (RSS/OPML, Runtime-CRUD) | ✅ implementiert |
+| Quellenverwaltung (RSS/OPML/yt-dlp, Runtime-CRUD) | ✅ implementiert |
 | n8n-Workflow-Scheduler (autonome Ausführung) | ✅ implementiert |
+| n8n-API-Discovery/-Verwaltung | ✅ implementiert |
+| yt-dlp-Discovery für Kanäle/Playlists | ✅ implementiert |
+| Persistente Job-History (`data/history.json`) | ✅ implementiert |
 
 > Hinweis: Die Medien-Pipeline benötigt `ffmpeg`/`ffprobe` (und `yt-dlp` für
 > YouTube/RSS); im Docker-Image sind sie enthalten. Ohne Telegram-Zugangsdaten
@@ -134,6 +137,11 @@ Kompatibel zum Original unter `/voduploader/...`, zusätzlich als `/api/...`-Ali
 | `POST` | `/voduploader/api/sources/:id/check` | Einzelne Quelle prüfen |
 | `GET/POST/PATCH/DELETE` | `/voduploader/api/workflows` | n8n-Workflows |
 | `POST` | `/voduploader/api/workflows/:id/run` | Workflow sofort ausführen |
+| `GET` | `/voduploader/n8n/status` | n8n-API-Verbindung prüfen |
+| `GET` | `/voduploader/n8n/discover` | Workflows über die n8n-API auflisten |
+| `POST` | `/voduploader/n8n/import/:id` | n8n-Workflow lokal importieren |
+| `POST` | `/voduploader/n8n/discover/:id/activate` · `…/deactivate` | Workflow in n8n schalten |
+| `DELETE` | `/voduploader/api/history` | Job-History leeren |
 | `GET` | `/rss/status` | RSS-Status |
 | `POST` | `/rss/check` · `/rss/backfill` · `/voduploader/api/rss/retry` | RSS-Steuerung |
 | `POST` | `/voduploader/n8n/run?name=…` | n8n-Workflow starten |
@@ -191,6 +199,17 @@ src/
   `data/workflows.json`, manuelles und zeitgesteuertes Auslösen der Webhooks
   (Scheduler-Tick alle 15 s, Cooldown, Timeout, Statushistorie). Der alte
   Endpoint `/voduploader/n8n/run?name=…` bleibt kompatibel.
+- **n8n-API:** `src/backend/n8n/client.ts` – nutzt Base URL + API-Key aus den
+  Einstellungen (`X-N8N-API-KEY`), listet Workflows paginiert, leitet die
+  Produktions-Webhook-URL aus dem Webhook-Node ab und kann Workflows in n8n
+  aktivieren/deaktivieren sowie lokal importieren.
+- **yt-dlp-Quellen:** Quellen von Typ `ytdlp` nutzen
+  `yt-dlp --flat-playlist --dump-json`, um neue Videos eines Kanals/Playlists
+  ohne Download zu ermitteln; sie laufen durch dieselbe Baseline-, Alters- und
+  Retry-Logik wie RSS.
+- **Job-History:** `src/backend/history/store.ts` – `data/history.json` (0600),
+  beim Start in den Laufzeit-State geladen, beim Abschluss persistiert und über
+  die UI leerbar.
 - **Dashboard-Login:** `GET /voduploader/api/auth/request` erzeugt ein Token und
   einen Deep-Link `https://t.me/<bot>?start=login_<token>`. Der Bot-Handler
   (`startAuthFlow` im GramJS-Gateway) prüft den Absender gegen
@@ -207,10 +226,12 @@ src/
   Job abgeschlossen" (der Handler wartet auf das Job-Ergebnis).
 - **Login:** benötigt einen verbundenen Bot und mindestens einen Eintrag in
   `ALLOWED_DASHBOARD_USERS`; für lokale Entwicklung `AUTH_DEV_MODE=true` nutzen.
-- **n8n-API:** Base URL/API-Key werden gespeichert, aber das automatische
-  Discovery/Verwalten von Workflows über die n8n-API ist noch nicht umgesetzt;
-  ausgeführt wird über Webhook-URLs.
-- **Quellentypen:** RSS und OPML sind implementiert. Direkte Kanal-/Playlist-
-  Discovery via yt-dlp ist noch offen.
+- **n8n-Ausführung:** Auch mit API-Discovery erfolgt der Start über die
+  Webhook-URL (die öffentliche n8n-API bietet keinen generischen Run-Endpoint).
+  Workflows ohne Webhook-Trigger werden angezeigt, können aber nicht importiert
+  werden. `activate`/`deactivate` hängt von der n8n-Version ab.
+- **yt-dlp-Discovery:** nutzt `--flat-playlist` und liest pro Poll die neuesten
+  ~10–50 Einträge; sehr große Channels werden nicht vollständig indiziert.
+- **Job-History:** maximal 500 Einträge; ältere werden verworfen.
 - **Telegram-Zugangsdaten** aus den Einstellungen greifen erst nach einem
   Neustart (die MTProto-Verbindung wird beim Start aufgebaut).

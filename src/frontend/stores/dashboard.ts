@@ -74,6 +74,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  async function clearHistory(): Promise<number> {
+    try {
+      const { data } = await api.delete<{ removed: number }>(endpoints.history());
+      await fetchStatus();
+      return data.removed;
+    } catch (err) {
+      throw new Error(errorMessage(err, 'Verlauf konnte nicht geleert werden'));
+    }
+  }
+
   async function triggerRss(): Promise<string> {
     try {
       const { data } = await api.post<{ status: string }>(endpoints.rssCheck());
@@ -118,6 +128,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     connect,
     disconnect,
     cancelJob,
+    clearHistory,
     triggerRss,
     backfillRss,
     resetRss,

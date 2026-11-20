@@ -28,6 +28,7 @@ onMounted(async () => {
   }
   try {
     await store.load();
+    await store.checkN8n();
   } catch (error) {
     show(errorMessage(error), 'error');
   }
@@ -115,6 +116,38 @@ async function remove(id: string): Promise<void> {
     show(errorMessage(error), 'error');
   }
 }
+
+async function discover(): Promise<void> {
+  await store.discover();
+  if (store.discovered.length > 0) show(`${store.discovered.length} Workflow(s) gefunden.`, 'success');
+  else if (store.discoverError) show(store.discoverError, 'error');
+}
+
+function isImported(workflow: { name: string; webhookUrl: string | null }): boolean {
+  return store.workflows.some(
+    (local) =>
+      local.name === workflow.name ||
+      (workflow.webhookUrl !== null && local.webhookUrl === workflow.webhookUrl),
+  );
+}
+
+async function importOne(id: string, name: string): Promise<void> {
+  try {
+    const imported = await store.importWorkflow(id);
+    show(imported ? `'${name}' importiert.` : `'${name}' war bereits vorhanden.`, 'success');
+  } catch (error) {
+    show(errorMessage(error), 'error');
+  }
+}
+
+async function n8nToggle(id: string, active: boolean): Promise<void> {
+  try {
+    await store.setActive(id, !active);
+    show(active ? 'Workflow in n8n deaktiviert.' : 'Workflow in n8n aktiviert.', 'success');
+  } catch (error) {
+    show(errorMessage(error), 'error');
+  }
+}
 </script>
 
 <template>
@@ -147,6 +180,79 @@ async function remove(id: string): Promise<void> {
         <button type="button" class="btn btn-primary" :disabled="adding" @click="add">
           {{ adding ? 'Füge hinzu…' : 'Hinzufügen' }}
         </button>
+      </div>
+    </div>
+
+    <div class="card mb-6">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="card-title">n8n-API (Discovery)</div>
+        <div class="flex items-center gap-2">
+          <span v-if="store.n8nConfigured === false" class="badge badge-idle">nicht verbunden</span>
+          <span v-else-if="store.n8nConfigured" class="badge badge-live">verbunden</span>
+          <button type="button" class="btn text-xs" :disabled="store.discovering" @click="discover">
+            {{ store.discovering ? 'Lade…' : 'Workflows von n8n laden' }}
+          </button>
+        </div>
+      </div>
+      <p class="mb-3 text-xs text-muted">
+        Base URL und API-Key in den
+        <RouterLink to="/settings" class="text-cyan hover:underline">Einstellungen</RouterLink>
+        hinterlegen. Importiert Workflows mit Webhook-Trigger in die lokale Liste.
+      </p>
+
+      <div
+        v-if="store.discoverError"
+        class="mb-3 rounded-lg border border-rose/40 bg-rose/10 px-3 py-2 text-xs text-rose"
+      >
+        {{ store.discoverError }}
+      </div>
+
+      <div v-if="store.discovered.length > 0" class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-card-border text-xs uppercase tracking-wide text-muted">
+              <th class="py-2 pr-4 font-medium">Name</th>
+              <th class="py-2 pr-4 font-medium">Aktiv</th>
+              <th class="py-2 pr-4 font-medium">Webhook</th>
+              <th class="py-2 font-medium">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="workflow in store.discovered"
+              :key="workflow.id"
+              class="border-b border-card-border/50 last:border-0"
+            >
+              <td class="py-2 pr-4 font-semibold text-slate-100">{{ workflow.name }}</td>
+              <td class="py-2 pr-4">
+                <span class="badge" :class="workflow.active ? 'badge-live' : 'badge-idle'">
+                  {{ workflow.active ? 'aktiv' : 'inaktiv' }}
+                </span>
+              </td>
+              <td class="max-w-[22rem] truncate py-2 pr-4 text-muted" :title="workflow.webhookUrl ?? ''">
+                {{ workflow.webhookUrl ?? '— kein Webhook —' }}
+              </td>
+              <td class="py-2">
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="btn text-xs"
+                    :disabled="!workflow.webhookUrl || isImported(workflow)"
+                    @click="importOne(workflow.id, workflow.name)"
+                  >
+                    {{ isImported(workflow) ? 'Importiert' : 'Importieren' }}
+                  </button>
+                  <button type="button" class="btn text-xs" @click="n8nToggle(workflow.id, workflow.active)">
+                    {{ workflow.active ? 'Deaktivieren' : 'Aktivieren' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else-if="!store.discovering && !store.discoverError" class="text-xs text-muted">
+        Noch keine Discovery durchgeführt.
       </div>
     </div>
 

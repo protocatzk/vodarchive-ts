@@ -1,9 +1,12 @@
 import { config } from './config';
+import { historyStore, type HistoryItem } from './history/store';
 import { JobStore } from './jobs/job_store';
 import { logger } from './logger';
 import { topicManager } from './topic/manager';
 import { UnconfiguredTelegramGateway } from './telegram/stub';
 import type { TelegramGateway } from './telegram/gateway';
+
+export type { HistoryItem };
 
 export type PendingAuthStatus = 'pending' | 'approved' | 'denied' | 'expired';
 
@@ -40,17 +43,6 @@ export interface QueueItem {
   source: string;
 }
 
-export interface HistoryItem {
-  finished_at: string;
-  streamer: string;
-  title: string;
-  parts: number;
-  total_size_mb: number | string;
-  topic_id: number | null;
-  topic_name: string;
-  status: 'success' | 'failed' | 'cancelled';
-}
-
 export interface JobOutcome {
   status: 'success' | 'cancelled' | 'failed';
   error?: string;
@@ -67,7 +59,7 @@ class RuntimeState {
 
   activeJob: ActiveJob | null = null;
   waitingQueue: QueueItem[] = [];
-  history: HistoryItem[] = [];
+  history: HistoryItem[] = historyStore.list(100);
 
   sessions = new Map<string, Session>();
   pendingAuth = new Map<string, PendingAuth>();
@@ -117,6 +109,13 @@ class RuntimeState {
   addHistory(item: HistoryItem): void {
     this.history.unshift(item);
     if (this.history.length > 100) this.history.length = 100;
+    historyStore.add(item);
+  }
+
+  clearHistory(): number {
+    const removed = historyStore.clear();
+    this.history = [];
+    return removed;
   }
 
   isCancelled(key: string): boolean {
